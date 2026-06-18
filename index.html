@@ -496,6 +496,17 @@
     <!-- QR Tool -->
     <div class="qr-section" id="qrSection">
       <div class="qr-left">
+        <div class="qr-label">🌐 Site URL (for QR code)</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+          <input id="siteUrlInput" type="url" placeholder="https://yourusername.github.io/mystery-seat/index.html"
+            style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;
+            font-family:'DM Mono',monospace;font-size:11px;color:var(--text);background:var(--surface2);outline:none;"
+            onkeydown="if(event.key==='Enter')saveSiteUrl()"
+          />
+          <button class="btn-ghost" onclick="saveSiteUrl()" style="font-size:12px;padding:8px 14px;white-space:nowrap;">💾 Save</button>
+          <button class="btn-ghost" onclick="clearSiteUrl()" style="font-size:12px;padding:8px 14px;white-space:nowrap;">✕ Clear</button>
+          <span id="siteUrlStatus" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--success);"></span>
+        </div>
         <div class="qr-label">📱 Current QR Code Token</div>
         <div class="qr-slot-badge" id="qrSlotBadge">⏳ Loading…</div>
         <div class="qr-url" id="qrUrl">—</div>
@@ -794,10 +805,33 @@ function logoutPoc() {
 // Minimal QR encoder (alphanumeric + URL, version 3-5, ECC M)
 // Using a lightweight inline QR library approach via canvas
 
+function getSiteBaseUrl() {
+  // Use saved URL if set, otherwise fall back to current location
+  return localStorage.getItem('siteBaseUrl') || (window.location.origin + window.location.pathname);
+}
+
 function buildTokenUrl() {
-  const base = window.location.origin + window.location.pathname;
+  const base = getSiteBaseUrl();
   const token = getExpectedToken();
   return `${base}?t=${encodeURIComponent(token)}`;
+}
+
+function saveSiteUrl() {
+  const input = document.getElementById('siteUrlInput');
+  const val = input.value.trim().replace(/\?.*$/, '').replace(/\/+$/, '');
+  if (!val) { alert('Please enter a URL.'); return; }
+  localStorage.setItem('siteBaseUrl', val);
+  document.getElementById('siteUrlStatus').textContent = '✅ Saved!';
+  setTimeout(() => document.getElementById('siteUrlStatus').textContent = '', 2000);
+  renderQrCode();
+}
+
+function clearSiteUrl() {
+  localStorage.removeItem('siteBaseUrl');
+  document.getElementById('siteUrlInput').value = '';
+  document.getElementById('siteUrlStatus').textContent = '🗑 Cleared';
+  setTimeout(() => document.getElementById('siteUrlStatus').textContent = '', 2000);
+  renderQrCode();
 }
 
 function getSlotName() {
@@ -822,6 +856,11 @@ function getMsUntilNextSlot() {
 // ── Tiny QR renderer using a public CDN ──
 
 function renderQrCode() {
+  // Pre-fill input with saved URL
+  const savedUrl = localStorage.getItem('siteBaseUrl');
+  const inputEl = document.getElementById('siteUrlInput');
+  if (inputEl && savedUrl) inputEl.value = savedUrl;
+
   const url = buildTokenUrl();
   document.getElementById('qrUrl').textContent = url;
   document.getElementById('qrSlotBadge').textContent = '🕐 ' + getSlotName();
