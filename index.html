@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,25 +11,28 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f5f5f7; --surface: #ffffff; --surface2: #f0f0f2; --surface3: #e5e5ea;
-    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
-    --accent: #6c63ff; --accent-dim: rgba(108,99,255,0.10); --accent-dim2: rgba(108,99,255,0.06);
-    --text: #1a1a1a; --text2: #666666; --text3: #999999;
+    --bg: #f0f2f8; --surface: #ffffff; --surface2: #eef0f8; --surface3: #e2e6f0;
+    --border: rgba(46,48,142,0.10); --border2: rgba(46,48,142,0.18);
+    --accent: #2E308E; --accent2: #2F78C4;
+    --accent-dim: rgba(46,48,142,0.12); --accent-dim2: rgba(46,48,142,0.06);
+    --accent-grad: linear-gradient(135deg, #2E308E 0%, #2F78C4 100%);
+    --accent-grad-r: linear-gradient(135deg, #2F78C4 0%, #2E308E 100%);
+    --text: #1a1a2e; --text2: #4a4a72; --text3: #8888aa;
     --success: #16a34a; --success-dim: rgba(22,163,74,0.1);
     --danger: #dc2626; --danger-dim: rgba(220,38,38,0.08);
   }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); background-image: radial-gradient(ellipse at 20% 10%, rgba(47,120,196,0.10) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(46,48,142,0.09) 0%, transparent 55%); color: var(--text); min-height: 100vh; overflow-x: hidden; }
   body::before {
     content: ''; position: fixed; inset: 0;
-    background-image: linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(46,48,142,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(46,48,142,0.04) 1px, transparent 1px);
     background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
   .page { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 48px 24px 80px; }
 
   /* ── HEADER ── */
-  .header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 52px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 52px; padding-bottom: 24px; border-bottom: 2px solid transparent; border-image: linear-gradient(to right, rgba(46,48,142,.3), rgba(47,120,196,.2), transparent) 1; }
   .logo { font-family: 'Bebas Neue', sans-serif; font-size: clamp(44px, 7vw, 72px); line-height: .9; letter-spacing: 2px; }
-  .logo span { color: var(--accent); }
+  .logo span { background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .meta { text-align: right; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
   .meta strong { font-size: 20px; color: var(--text2); display: block; margin-bottom: 2px; }
   .poc-btn {
@@ -39,7 +43,7 @@
     transition: border-color .15s, color .15s, background .15s;
     text-decoration: none;
   }
-  .poc-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim2); }
+  .poc-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(47,120,196,.07); }
 
   /* ── LOCATION PICKER ── */
   #locationPage { position:relative; z-index:1; }
@@ -47,18 +51,22 @@
   .loc-eyebrow { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin-bottom:10px; }
   .loc-title { font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:2px; color:var(--text); margin-bottom:6px; text-align:center; }
   .loc-sub { font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); margin-bottom:36px; text-align:center; line-height:1.8; }
-  .loc-cards { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; width:100%; max-width:500px; }
+  .loc-cards { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; width:100%; max-width:520px; }
+  .loc-cards .loc-card:nth-child(1) { animation:slideInLeft .5s .1s ease both; }
+  .loc-cards .loc-card:nth-child(2) { animation:slideInRight .5s .2s ease both; }
   .loc-card {
     flex:1; min-width:180px; max-width:220px; background:var(--surface); border:2px solid var(--border);
     border-radius:20px; padding:32px 20px; text-align:center; cursor:pointer; position:relative; overflow:hidden;
     transition:border-color .2s, transform .2s, box-shadow .2s;
   }
-  .loc-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--accent); transform:scaleX(0); transform-origin:left; transition:transform .3s ease; }
+  .loc-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:var(--accent-grad); transform:scaleX(0); transform-origin:left; transition:transform .35s cubic-bezier(.4,0,.2,1); border-radius:20px 20px 0 0; }
   .loc-card:hover::before { transform:scaleX(1); }
-  .loc-card:hover { border-color:var(--border2); transform:translateY(-4px); box-shadow:0 8px 30px rgba(0,0,0,.10),0 0 0 1px rgba(108,99,255,.1); }
+  .loc-card:hover { border-color:rgba(46,48,142,.22); transform:translateY(-6px); box-shadow:0 12px 36px rgba(46,48,142,.14),0 0 0 1px rgba(46,48,142,.10); }
   .loc-card:active { transform:translateY(-1px); }
-  .loc-icon { font-size:36px; margin-bottom:16px; display:block; }
-  .loc-name { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; color:var(--text); margin-bottom:4px; }
+  .loc-icon { font-size:36px; margin-bottom:16px; display:block; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
+  .loc-card:hover .loc-icon { transform:scale(1.18) translateY(-3px); }
+  .loc-name { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; color:var(--text); margin-bottom:4px; transition:color .2s; }
+  .loc-card:hover .loc-name { background:var(--accent-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .loc-desc { font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); letter-spacing:.5px; }
   .loc-header { position:absolute; top:20px; right:20px; }
 
@@ -70,36 +78,41 @@
     transition: border-color .25s, transform .25s, background .25s, box-shadow .25s;
     animation: riseIn .5s ease both;
   }
-  @keyframes riseIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-  .mystery-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--accent); transform:scaleX(0); transform-origin:left; transition:transform .35s ease; }
+  @keyframes riseIn { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideInLeft { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes slideInRight { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
+  @keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 0 rgba(47,120,196,.0)} 50%{box-shadow:0 0 24px 4px rgba(47,120,196,.18)} }
+  @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .mystery-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:var(--accent-grad); transform:scaleX(0); transform-origin:left; transition:transform .4s cubic-bezier(.4,0,.2,1); }
   .mystery-card.idle:hover::before { transform:scaleX(1); }
-  .mystery-card.idle:hover { border-color:var(--border2); background:var(--surface2); transform:translateY(-4px); box-shadow:0 8px 30px rgba(0,0,0,.12),0 0 0 1px rgba(108,99,255,.1); }
+  .mystery-card.idle:hover { border-color:rgba(46,48,142,.20); background:var(--surface2); transform:translateY(-6px); box-shadow:0 12px 40px rgba(46,48,142,.14),0 0 0 1px rgba(46,48,142,.08); }
   .mystery-card.idle:active { transform:translateY(-1px); }
   .mystery-card.expanded { cursor:default; border-color:var(--border2); }
   .mystery-card.all-done { cursor:default; border-color:rgba(74,222,128,.2); background:rgba(74,222,128,.03); }
   .mystery-card.all-done::before { background:var(--success); transform:scaleX(1); }
-  .card-glow { position:absolute; top:-80px; left:50%; transform:translateX(-50%); width:340px; height:340px; background:radial-gradient(circle,rgba(108,99,255,.06) 0%,transparent 70%); pointer-events:none; transition:opacity .4s; }
+  .card-glow { position:absolute; top:-80px; left:50%; transform:translateX(-50%); width:340px; height:340px; background:radial-gradient(circle,rgba(47,120,196,.10) 0%,rgba(46,48,142,.05) 50%,transparent 70%); pointer-events:none; transition:opacity .4s; }
   .mystery-card.expanded .card-glow, .mystery-card.all-done .card-glow { opacity:0; }
   .card-body { padding: 44px 36px 36px; position: relative; }
 
   /* idle */
   .idle-view { text-align:center; }
-  .big-q { font-family:'Bebas Neue',sans-serif; font-size:120px; line-height:1; color:var(--accent); opacity:.13; letter-spacing:-4px; display:block; margin-bottom:-18px; user-select:none; transition:opacity .3s; }
-  .mystery-card.idle:hover .big-q { opacity:.24; }
-  .card-icon { width:68px; height:68px; border-radius:16px; background:var(--accent-dim2); border:1px solid rgba(108,99,255,.2); display:flex; align-items:center; justify-content:center; font-size:30px; margin:0 auto 22px; transition:background .3s,border-color .3s; }
-  .mystery-card.idle:hover .card-icon { background:var(--accent-dim); border-color:rgba(108,99,255,.3); }
+  .big-q { font-family:'Bebas Neue',sans-serif; font-size:120px; line-height:1; background:var(--accent-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; opacity:.18; letter-spacing:-4px; display:block; margin-bottom:-18px; user-select:none; transition:opacity .4s; }
+  .mystery-card.idle:hover .big-q { opacity:.32; }
+  .card-icon { width:68px; height:68px; border-radius:16px; background:linear-gradient(135deg,rgba(46,48,142,.08),rgba(47,120,196,.08)); border:1px solid rgba(47,120,196,.22); display:flex; align-items:center; justify-content:center; font-size:30px; margin:0 auto 22px; transition:background .3s,border-color .3s; animation:pulseGlow 3s ease infinite; }
+  .mystery-card.idle:hover .card-icon { background:linear-gradient(135deg,rgba(46,48,142,.15),rgba(47,120,196,.15)); border-color:rgba(47,120,196,.4); animation:none; box-shadow:0 0 20px rgba(47,120,196,.25); }
   .idle-eyebrow { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
   .idle-title { font-family:'Bebas Neue',sans-serif; font-size:40px; letter-spacing:2px; margin-bottom:10px; }
   .idle-sub { font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); line-height:1.8; margin-bottom:28px; }
   .idle-sub b { color:var(--text2); }
   .pip-row { display:flex; gap:5px; justify-content:center; flex-wrap:wrap; margin-bottom:26px; }
   .pip { height:5px; border-radius:3px; background:var(--surface3); transition:background .4s; }
-  .pip.avail { background:var(--accent); opacity:.55; }
+  .pip.avail { background:var(--accent-grad); opacity:.55; }
   .pip.taken { background:var(--text3); }
   .idle-footer { display:flex; align-items:center; justify-content:space-between; padding-top:18px; border-top:1px solid var(--border); }
   .seats-left { font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); }
   .seats-left b { color:var(--text2); font-size:14px; }
-  .cta-pill { font-family:'DM Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:.5px; display:flex; align-items:center; gap:4px; transition:gap .2s; }
+  .cta-pill { font-family:'DM Mono',monospace; font-size:11px; background:var(--accent-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:.5px; display:flex; align-items:center; gap:4px; transition:gap .25s cubic-bezier(.4,0,.2,1); }
   .mystery-card.idle:hover .cta-pill { gap:9px; }
 
   /* all done */
@@ -117,18 +130,18 @@
   .exp-close:hover { background:var(--border2); color:var(--text); }
   .step-dots { display:flex; gap:6px; margin-bottom:22px; }
   .step-dot { height:3px; flex:1; border-radius:2px; background:var(--surface3); transition:background .3s; }
-  .step-dot.done { background:var(--accent); } .step-dot.active { background:var(--accent); opacity:.5; }
+  .step-dot.done { background:var(--accent2); } .step-dot.active { background:var(--accent-grad); background-size:200%; opacity:.6; }
   .field { margin-bottom:14px; }
   .field label { display:block; font-family:'DM Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin-bottom:7px; }
   .field input { width:100%; padding:11px 13px; background:var(--surface2); border:1px solid var(--border2); border-radius:10px; color:var(--text); font-size:15px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color .15s,background .15s; }
   .field input::placeholder { color:var(--text3); }
-  .field input:focus { border-color:var(--accent); background:var(--surface3); }
+  .field input:focus { border-color:var(--accent2); background:var(--surface3); box-shadow:0 0 0 3px rgba(47,120,196,.12); }
   .field .err { font-size:11px; color:var(--danger); font-family:'DM Mono',monospace; margin-top:5px; display:none; }
   .field.bad input { border-color:var(--danger); }
   .field.bad .err { display:block; }
   .dupe-warn { display:none; background:var(--danger-dim); border:1px solid rgba(255,107,107,.2); border-radius:9px; padding:10px 13px; margin-bottom:14px; font-size:12px; color:var(--danger); font-family:'DM Mono',monospace; line-height:1.6; }
-  .btn-primary { width:100%; padding:13px 18px; background:var(--accent); border:none; border-radius:10px; color:#ffffff; font-size:14px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:opacity .15s,transform .1s; display:flex; align-items:center; justify-content:center; gap:8px; }
-  .btn-primary:hover { opacity:.88; } .btn-primary:active { transform:scale(.98); } .btn-primary:disabled { opacity:.35; cursor:not-allowed; }
+  .btn-primary { width:100%; padding:13px 18px; background:var(--accent-grad); border:none; border-radius:10px; color:#ffffff; font-size:14px; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:opacity .2s,transform .15s,box-shadow .2s; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 16px rgba(46,48,142,.25); }
+  .btn-primary:hover { opacity:.9; box-shadow:0 6px 24px rgba(46,48,142,.35); transform:translateY(-1px); } .btn-primary:active { transform:scale(.98) translateY(0); box-shadow:0 2px 8px rgba(46,48,142,.2); } .btn-primary:disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
   .spinner { width:14px; height:14px; border:2px solid rgba(0,0,0,.2); border-top-color:#ffffff; border-radius:50%; animation:spin .7s linear infinite; display:none; }
   @keyframes spin { to{transform:rotate(360deg)} }
 
@@ -148,7 +161,7 @@
 
   /* result */
   .result-view { text-align:center; animation:expandIn .3s ease both; }
-  .result-badge { display:inline-flex; align-items:center; gap:10px; background:var(--accent); color:#ffffff; font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; padding:14px 28px; border-radius:16px; margin:0 auto 18px; animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both; box-shadow:0 4px 20px rgba(108,99,255,.25); }
+  .result-badge { display:inline-flex; align-items:center; gap:10px; background:var(--accent-grad); color:#ffffff; font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; padding:14px 28px; border-radius:16px; margin:0 auto 18px; animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both; box-shadow:0 6px 24px rgba(46,48,142,.30); }
   @keyframes popIn { 0%{transform:scale(.4) rotate(-6deg);opacity:0} 60%{transform:scale(1.1) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
   @keyframes fadeUp { from{transform:translateY(8px);opacity:0} to{transform:none;opacity:1} }
   .result-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); margin-bottom:5px; animation:fadeUp .4s .18s ease both; }
@@ -156,13 +169,13 @@
   .result-sub { font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); margin-bottom:20px; animation:fadeUp .4s .26s ease both; }
   .result-pips { display:flex; gap:6px; justify-content:center; margin-bottom:20px; animation:fadeUp .4s .28s ease both; }
   .res-pip { height:7px; width:28px; border-radius:4px; background:var(--surface3); }
-  .res-pip.booked { background:var(--accent); opacity:.6; }
-  .res-pip.this { background:var(--accent); box-shadow:0 0 8px rgba(108,99,255,.4); }
+  .res-pip.booked { background:var(--accent2); opacity:.55; }
+  .res-pip.this { background:var(--accent-grad); box-shadow:0 0 10px rgba(47,120,196,.45); }
   .detail-grid { background:var(--surface2); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:18px; text-align:left; animation:fadeUp .4s .32s ease both; }
   .detail-row { display:flex; align-items:center; justify-content:space-between; padding:10px 15px; border-bottom:1px solid var(--border); font-size:13px; }
   .detail-row:last-child { border-bottom:none; }
   .dk { color:var(--text3); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.5px; }
-  .dv { color:var(--text); font-family:'DM Mono',monospace; font-weight:500; }
+  .dv { color:var(--text); font-family:'DM Mono',monospace; font-weight:500; transition:color .2s; }
   .done-btn-wrap { animation:fadeUp .4s .36s ease both; }
 
   /* ── POC LOGIN OVERLAY ── */
@@ -178,7 +191,7 @@
     overflow: hidden; animation: modalIn .22s cubic-bezier(.34,1.56,.64,1);
   }
   @keyframes modalIn { from{transform:scale(.92) translateY(12px);opacity:0} to{transform:none;opacity:1} }
-  .login-stripe { height: 4px; background: var(--accent); }
+  .login-stripe { height: 5px; background: var(--accent-grad); }
   .login-inner { padding: 28px; }
   .login-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-dim2); border: 1px solid rgba(108,99,255,.2); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
   .login-title { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; margin-bottom: 4px; }
@@ -191,32 +204,35 @@
   /* ── POC DASHBOARD ── */
   .poc-page { display: none; }
   .poc-page.show { display: block; animation: riseIn .4s ease both; }
-  .poc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .poc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; border-top: 4px solid transparent; border-image: var(--accent-grad) 1; }
   .poc-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; }
-  .poc-title span { color: var(--accent); }
+  .poc-title span { background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .poc-actions { display: flex; gap: 10px; align-items: center; }
   .btn-download {
     display: inline-flex; align-items: center; gap: 7px;
-    padding: 10px 18px; background: var(--accent); border: none; border-radius: 10px;
+    padding: 10px 18px; background: var(--accent-grad); border: none; border-radius: 10px;
     color: #ffffff; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500;
-    cursor: pointer; transition: opacity .15s;
+    cursor: pointer; transition: opacity .2s, transform .15s, box-shadow .2s;
+    box-shadow: 0 3px 12px rgba(46,48,142,.22);
   }
-  .btn-download:hover { opacity: .85; }
+  .btn-download:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(46,48,142,.30); }
   .btn-logout { padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; color: var(--text3); font-size: 12px; font-family: 'DM Mono', monospace; cursor: pointer; transition: background .15s, color .15s; }
   .btn-logout:hover { background: var(--surface3); color: var(--text); }
 
   /* stat cards */
   .poc-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
-  .stat-card .sc-val { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; color: var(--accent); }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent2); border-radius: 14px; padding: 18px 20px; transition: transform .2s, box-shadow .2s; }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,48,142,.10); }
+  .stat-card .sc-val { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   .stat-card .sc-lbl { font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-top: 2px; }
 
   /* card breakdown */
   .card-breakdown { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 28px; }
-  .cb-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .cb-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; transition: transform .2s, box-shadow .2s; }
+  .cb-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(46,48,142,.09); }
   .cb-name { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); margin-bottom: 6px; }
   .cb-bar-wrap { background: var(--surface3); border-radius: 4px; height: 6px; margin-bottom: 6px; overflow: hidden; }
-  .cb-bar { height: 100%; border-radius: 4px; background: var(--accent); transition: width .6s ease; }
+  .cb-bar { height: 100%; border-radius: 4px; background: var(--accent-grad); transition: width .7s cubic-bezier(.4,0,.2,1); }
   .cb-bar.full { background: var(--success); }
   .cb-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); }
   .cb-meta b { color: var(--text2); }
@@ -228,16 +244,147 @@
   .table-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); background: var(--surface2); padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); }
   .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); text-align: left; padding: 10px 16px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  td { padding: 11px 16px; color: var(--text2); border-bottom: 1px solid var(--border); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  th { font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); text-align: left; padding: 10px 16px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; background: linear-gradient(to right, rgba(46,48,142,.05), rgba(47,120,196,.03)); }
+  td { padding: 11px 16px; color: var(--text2); border-bottom: 1px solid var(--border); font-family: 'DM Mono', monospace; white-space: nowrap; transition: background .15s; }
+  tr:hover td { background: rgba(47,120,196,.04); }
   tr:last-child td { border-bottom: none; }
   .td-name { color: var(--text); font-weight: 500; }
-  .tag { display:inline-block; background:var(--accent-dim); color:var(--accent); border:1px solid rgba(108,99,255,.2); padding:2px 8px; border-radius:4px; font-size:10px; }
+  .tag { display:inline-block; background:linear-gradient(135deg,rgba(46,48,142,.08),rgba(47,120,196,.08)); color:var(--accent); border:1px solid rgba(47,120,196,.18); padding:2px 8px; border-radius:4px; font-size:10px; }
   .tag.green { background:var(--success-dim); color:var(--success); border-color:rgba(74,222,128,.2); }
   .log-empty { text-align:center; padding:36px; font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); }
+  /* ── SLOT MACHINE ─────────────────────────── */
+  .slot-view {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 0 8px; text-align: center;
+  }
+  .slot-title {
+    font-size: 13px; font-family: 'DM Mono', monospace; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 18px;
+  }
+  .slot-machine {
+    display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;
+  }
+  .slot-reel-wrap {
+    width: 76px; height: 80px; border-radius: 14px;
+    background: var(--surface2); border: 1.5px solid var(--border2);
+    overflow: hidden; position: relative;
+  }
+  .slot-reel {
+    display: flex; flex-direction: column;
+    transition: transform 0s;
+    will-change: transform;
+  }
+  .slot-symbol {
+    width: 76px; height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-family: 'DM Mono', monospace;
+    font-weight: 700; color: var(--text);
+    flex-shrink: 0;
+  }
+  .slot-symbol.accent { background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 32px; }
+  .slot-reel-wrap::before, .slot-reel-wrap::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 28px; z-index: 2; pointer-events: none;
+  }
+  .slot-reel-wrap::before { top: 0; background: linear-gradient(to bottom, var(--surface2), transparent); }
+  .slot-reel-wrap::after  { bottom: 0; background: linear-gradient(to top, var(--surface2), transparent); }
+  .slot-label {
+    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text3); margin-top: 6px;
+  }
+  .slot-reel-col { display: flex; flex-direction: column; align-items: center; }
+  .slot-win-flash {
+    animation: winFlash .5s ease 3;
+  }
+  @keyframes winFlash {
+    0%,100% { background: var(--surface2); border-color: var(--border2); }
+    50% { background: rgba(47,120,196,.15); border-color: var(--accent2); box-shadow: 0 0 20px rgba(47,120,196,.35); }
+  }
+  .slot-emoji-row {
+    font-size: 22px; letter-spacing: 6px; margin-bottom: 8px;
+    animation: popIn .4s cubic-bezier(.34,1.56,.64,1) both;
+  }
+
+  /* ── TOKEN GATE ───────────────────────────── */
+  #tokenGate {
+    position: fixed; inset: 0; z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    background-image: radial-gradient(ellipse at 20% 10%, rgba(47,120,196,0.12) 0%, transparent 55%),
+                      radial-gradient(ellipse at 80% 80%, rgba(46,48,142,0.10) 0%, transparent 55%);
+    padding: 20px;
+    animation: riseIn .4s ease both;
+  }
+  .gate-box {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 24px; width: 100%; max-width: 380px;
+    overflow: hidden; text-align: center;
+    box-shadow: 0 20px 60px rgba(46,48,142,.15);
+    animation: modalIn .4s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .gate-stripe { height: 5px; background: var(--accent-grad); }
+  .gate-inner { padding: 36px 28px 32px; }
+  .gate-icon { font-size: 44px; margin-bottom: 16px; display:block; animation: floatUp 3s ease infinite; }
+  .gate-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 2px; margin-bottom: 6px; }
+  .gate-title span { background: var(--accent-grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .gate-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); line-height: 1.7; margin-bottom: 28px; }
+  .gate-err {
+    display: none; background: var(--danger-dim); border: 1px solid rgba(220,38,38,.2);
+    border-radius: 10px; padding: 11px 14px; margin-bottom: 16px;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--danger); line-height: 1.6;
+  }
+  .gate-expired {
+    display: none; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.25);
+    border-radius: 10px; padding: 11px 14px; margin-bottom: 16px;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: #b45309; line-height: 1.6;
+  }
+
+  /* ── QR TOOL ───────────────────────────── */
+  .qr-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px 24px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .qr-left { flex: 1; min-width: 200px; }
+  .qr-label { font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--text3); margin-bottom: 6px; }
+  .qr-slot-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-grad); color: #fff;
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600;
+    padding: 6px 14px; border-radius: 20px; margin-bottom: 10px;
+  }
+  .qr-url {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3);
+    word-break: break-all; line-height: 1.6; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    margin-bottom: 12px;
+  }
+  .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .qr-right { flex-shrink: 0; }
+  #qrCanvas { border-radius: 12px; border: 2px solid var(--border2); display: block; }
+  .qr-expires {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3);
+    margin-top: 8px; text-align: center;
+  }
+  #qrCountdown { color: var(--accent2); font-weight: 600; }
+
 </style>
 </head>
 <body>
+
+<!-- TOKEN GATE -->
+<div id="tokenGate" style="display:none">
+  <div class="gate-box">
+    <div class="gate-stripe"></div>
+    <div class="gate-inner">
+      <span class="gate-icon">🔐</span>
+      <div class="gate-title">MYSTERY <span>SEAT</span></div>
+      <div class="gate-sub">This link has expired or is invalid.<br>Please scan the QR code to get a fresh link.</div>
+      <div class="gate-err" id="gateErr"></div>
+      <div class="gate-expired" id="gateExpired">⏰ This link was valid for <b id="gateSlot"></b> only.<br>Ask the organiser to scan the updated QR code.</div>
+    </div>
+  </div>
+</div>
 
 <!-- LOCATION PICKER -->
 <div id="locationPage">
@@ -270,7 +417,7 @@
     <div class="meta">
       <strong id="statFilled">0/24</strong>
       seats filled<br>
-     
+      
       <br>
       <a class="poc-btn" onclick="openLoginOverlay()">🔒 POC Login</a>
     </div>
@@ -329,6 +476,23 @@
         <button class="btn-download" onclick="downloadExcel()">⬇ Download Excel</button>
         <button class="btn-ghost" onclick="manualReset()" style="border-color:rgba(255,107,107,.3);color:var(--danger)" title="Clear all bookings and reset cards">↺ Reset</button>
         <button class="btn-logout" onclick="logoutPoc()">Logout</button>
+      </div>
+    </div>
+
+    <!-- QR Tool -->
+    <div class="qr-section" id="qrSection">
+      <div class="qr-left">
+        <div class="qr-label">📱 Current QR Code Token</div>
+        <div class="qr-slot-badge" id="qrSlotBadge">⏳ Loading…</div>
+        <div class="qr-url" id="qrUrl">—</div>
+        <div class="qr-actions">
+          <button class="btn-ghost" onclick="copyQrUrl()" style="font-size:12px;padding:8px 14px;">📋 Copy Link</button>
+          <button class="btn-ghost" onclick="downloadQr()" style="font-size:12px;padding:8px 14px;">⬇ Save QR PNG</button>
+        </div>
+      </div>
+      <div class="qr-right">
+        <canvas id="qrCanvas" width="140" height="140"></canvas>
+        <div class="qr-expires">Refreshes in <span id="qrCountdown">—</span></div>
       </div>
     </div>
 
@@ -459,8 +623,79 @@ function scheduleNextReset() {
   }, msUntil);
 }
 
+
+// ── TIME-BASED TOKEN GATE ────────────────────────────────────
+// Token format:  <base>-<YYYYMMDD>-<SLOT>
+// SLOT = AM (00:00–13:59) or PM (14:00–23:59)
+// Base secret — change this string to invalidate all old QR codes
+const TOKEN_SECRET = 'msb2026';
+
+function getExpectedToken() {
+  const now = new Date();
+  const y   = now.getFullYear();
+  const m   = String(now.getMonth() + 1).padStart(2, '0');
+  const d   = String(now.getDate()).padStart(2, '0');
+  const slot = now.getHours() < 14 ? 'AM' : 'PM';
+  return `${TOKEN_SECRET}-${y}${m}${d}-${slot}`;
+}
+
+function getSlotLabel(token) {
+  // e.g. msb2026-20260618-AM  → "18 Jun 2026 Morning"
+  try {
+    const parts = token.split('-');
+    const dateStr = parts[parts.length - 2]; // YYYYMMDD
+    const slotStr = parts[parts.length - 1]; // AM/PM
+    const yr  = dateStr.slice(0, 4);
+    const mo  = dateStr.slice(4, 6);
+    const dy  = dateStr.slice(6, 8);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const moLabel = months[parseInt(mo, 10) - 1] || mo;
+    const timeLabel = slotStr === 'AM' ? 'Morning (before 2 PM)' : 'Afternoon/Evening (after 2 PM)';
+    return `${parseInt(dy, 10)} ${moLabel} ${yr} · ${timeLabel}`;
+  } catch { return token; }
+}
+
+function checkTokenGate() {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('t');
+
+  // No token at all — show gate with generic message
+  if (!token) {
+    document.getElementById('tokenGate').style.display = 'flex';
+    document.getElementById('gateErr').style.display = 'block';
+    document.getElementById('gateErr').textContent = 'No access token found in this URL. Please scan the QR code.';
+    return false;
+  }
+
+  const expected = getExpectedToken();
+
+  // Valid token — let them in
+  if (token === expected) {
+    document.getElementById('tokenGate').style.display = 'none';
+    return true;
+  }
+
+  // Invalid/expired token
+  document.getElementById('tokenGate').style.display = 'flex';
+  document.getElementById('gateExpired').style.display = 'block';
+  document.getElementById('gateSlot').textContent = getSlotLabel(token);
+  return false;
+}
+
+// POC login bypasses the token gate (they know the password)
+function bypassGateForPoc() {
+  document.getElementById('tokenGate').style.display = 'none';
+}
+
 let state = checkAndApplyDailyReset(loadState());
 scheduleNextReset();
+
+// Gate check — hide public UI until token validated
+const _tokenValid = checkTokenGate();
+if (!_tokenValid) {
+  document.getElementById('locationPage').style.display = 'none';
+  document.getElementById('publicPage').style.display = 'none';
+}
 
 function selectLocation(loc) {
   selectedLocation = loc;
@@ -518,6 +753,7 @@ function attemptLogin() {
   }
 
   pocLoggedIn = true;
+  bypassGateForPoc();
   closeLoginOverlay();
   showPocDashboard();
 }
@@ -544,11 +780,280 @@ function logoutPoc() {
 }
 
 // ── POC DASHBOARD ────────────────────────────────────────────
+
+// ── QR CODE GENERATOR ────────────────────────────────────────
+// Minimal QR encoder (alphanumeric + URL, version 3-5, ECC M)
+// Using a lightweight inline QR library approach via canvas
+
+function buildTokenUrl() {
+  const base = window.location.origin + window.location.pathname;
+  const token = getExpectedToken();
+  return `${base}?t=${encodeURIComponent(token)}`;
+}
+
+function getSlotName() {
+  const now = new Date();
+  const slot = now.getHours() < 14 ? 'AM' : 'PM';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${now.getDate()} ${months[now.getMonth()]} · ${slot === 'AM' ? 'Morning' : 'Afternoon'}`;
+}
+
+function getMsUntilNextSlot() {
+  const now = new Date();
+  const next = new Date(now);
+  if (now.getHours() < 14) {
+    next.setHours(14, 0, 0, 0);
+  } else {
+    next.setDate(next.getDate() + 1);
+    next.setHours(0, 0, 0, 0);
+  }
+  return next - now;
+}
+
+// ── Tiny QR renderer using a public CDN ──
+// ── SELF-CONTAINED QR CODE ENGINE (Version 5, ECC M) ────────
+// Handles URLs up to ~80 bytes. No external dependencies.
+
+const QRGen = (() => {
+  // GF(256) tables
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (() => {
+    let v = 1;
+    for (let i = 0; i < 255; i++) {
+      EXP[i] = v; LOG[v] = i;
+      v = (v << 1) ^ (v & 0x80 ? 0x11D : 0);
+    }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+  })();
+  const gmul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
+
+  function rsGen(n) {
+    let p = [1];
+    for (let i = 0; i < n; i++) {
+      const q = [1, EXP[i]], r = new Array(p.length + 1).fill(0);
+      for (let a = 0; a < p.length; a++)
+        for (let b = 0; b < q.length; b++) r[a + b] ^= gmul(p[a], q[b]);
+      p = r;
+    }
+    return p;
+  }
+
+  function rsEncode(data, n) {
+    const gen = rsGen(n);
+    const msg = [...data, ...new Array(n).fill(0)];
+    for (let i = 0; i < data.length; i++) {
+      const c = msg[i];
+      if (c) for (let j = 0; j < gen.length; j++) msg[i + j] ^= gmul(gen[j], c);
+    }
+    return msg.slice(data.length);
+  }
+
+  // Version 5, ECC M: 37×37, 62 data codewords, 36 EC codewords
+  const SZ = 37, DCAP = 62, ECCAP = 36;
+
+  function encodeData(text) {
+    const bytes = [...new TextEncoder().encode(text)];
+    if (bytes.length > 47) throw new Error('URL too long');
+    const bits = [];
+    const push = (v, n) => { for (let i = n - 1; i >= 0; i--) bits.push((v >> i) & 1); };
+    push(0b0100, 4);   // byte mode
+    push(bytes.length, 8);
+    bytes.forEach(b => push(b, 8));
+    push(0, 4);        // terminator
+    while (bits.length % 8) bits.push(0);
+    const cw = [];
+    for (let i = 0; i < bits.length; i += 8)
+      cw.push(bits.slice(i, i + 8).reduce((a, b, j) => a | (b << (7 - j)), 0));
+    const pad = [0xEC, 0x11];
+    while (cw.length < DCAP) cw.push(pad[cw.length % 2]);
+    return cw;
+  }
+
+  function buildMatrix(data) {
+    const ec = rsEncode(data, ECCAP);
+    const allCW = [...data, ...ec];
+    const bits = [];
+    allCW.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+
+    // -1 = empty, -2 = reserved (format/finder), 0 = light, 1 = dark
+    const mat = Array.from({ length: SZ }, () => new Int8Array(SZ).fill(-1));
+    const set = (r, c, v) => { if (r >= 0 && r < SZ && c >= 0 && c < SZ) mat[r][c] = v; };
+
+    // Finder pattern at (row, col) — top-left corner of 7×7 pattern
+    const finder = (row, col) => {
+      for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
+        if (r === -1 || r === 7 || c === -1 || c === 7) { set(row + r, col + c, 0); continue; }
+        const inner = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        set(row + r, col + c, (r === 0 || r === 6 || c === 0 || c === 6 || inner) ? 1 : 0);
+      }
+    };
+    finder(0, 0); finder(0, SZ - 7); finder(SZ - 7, 0);
+
+    // Alignment patterns for version 5: at rows/cols [6, 30]
+    // All combos except those overlapping finders: (6,6),(6,30),(30,6),(30,30)
+    // Finders are at corners so skip (6,6),(0,0)... actual alignments:
+    const alignPos = [6, 30];
+    for (let ar of alignPos) for (let ac of alignPos) {
+      // Skip if overlaps finder
+      if ((ar <= 7 && ac <= 7) || (ar <= 7 && ac >= SZ - 8) || (ar >= SZ - 8 && ac <= 7)) continue;
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
+        set(ar + dr, ac + dc, (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (!dr && !dc)) ? 1 : 0);
+    }
+
+    // Timing strips
+    for (let i = 8; i < SZ - 8; i++) {
+      if (mat[6][i] === -1) set(6, i, i % 2 === 0 ? 1 : 0);
+      if (mat[i][6] === -1) set(i, 6, i % 2 === 0 ? 1 : 0);
+    }
+
+    // Dark module
+    set(SZ - 8, 8, 1);
+
+    // Reserve format info areas
+    for (let i = 0; i <= 8; i++) {
+      if (mat[8][i] === -1) mat[8][i] = -2;
+      if (mat[i][8] === -1) mat[i][8] = -2;
+    }
+    for (let i = SZ - 7; i < SZ; i++) {
+      if (mat[8][i] === -1) mat[8][i] = -2;
+      if (mat[i][8] === -1) mat[i][8] = -2;
+    }
+    mat[SZ - 8][8] = -2;
+
+    // Data placement — zigzag right-to-left in 2-column strips
+    let bi = 0;
+    for (let right = SZ - 1; right > 0; right -= 2) {
+      if (right === 6) right = 5;
+      const up = (Math.floor((SZ - 1 - right) / 2) % 2 === 0);
+      for (let vert = 0; vert < SZ; vert++) {
+        const row = up ? (SZ - 1 - vert) : vert;
+        for (let j = 0; j < 2; j++) {
+          const col = right - j;
+          if (mat[row][col] < 0 && mat[row][col] !== -2) {
+            mat[row][col] = bi < bits.length ? bits[bi++] : 0;
+          }
+        }
+      }
+    }
+
+    // Apply mask 2: row % 3 == 0
+    for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++)
+      if (mat[r][c] >= 0 && r % 3 === 0) mat[r][c] ^= 1;
+
+    // Format info for ECC M, mask 2 = 101111100110010 (after XOR with 101010000010010)
+    // Precomputed: M=2(10), mask=2(010), raw=10_010 → after BCH+XOR = 100111101010001 reversed
+    const fmtStr = '100111101010001';  // ECC M, mask 2
+    const fb = fmtStr.split('').map(Number);
+    // Bottom-left and top-right format areas
+    const fmtCoords1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+    const fmtCoords2 = [[SZ-1,8],[SZ-2,8],[SZ-3,8],[SZ-4,8],[SZ-5,8],[SZ-6,8],[SZ-7,8],[SZ-8,8],[8,SZ-8],[8,SZ-7],[8,SZ-6],[8,SZ-5],[8,SZ-4],[8,SZ-3],[8,SZ-2]];
+    fb.forEach((v,i)=>{set(fmtCoords1[i][0],fmtCoords1[i][1],v);set(fmtCoords2[i][0],fmtCoords2[i][1],v);});
+
+    return mat;
+  }
+
+  function draw(canvasEl, text, dark = '#2E308E', light = '#ffffff') {
+    let data;
+    try { data = encodeData(text); }
+    catch (e) {
+      const ctx = canvasEl.getContext('2d');
+      ctx.fillStyle = light; ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+      ctx.fillStyle = dark; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('URL too long', canvasEl.width / 2, canvasEl.height / 2 - 8);
+      ctx.fillText('Copy link above', canvasEl.width / 2, canvasEl.height / 2 + 10);
+      return false;
+    }
+    const mat = buildMatrix(data);
+    const sz = canvasEl.width;
+    const cell = Math.floor((sz - 8) / SZ);
+    const off = Math.floor((sz - cell * SZ) / 2);
+    const ctx = canvasEl.getContext('2d');
+    ctx.fillStyle = light; ctx.fillRect(0, 0, sz, sz);
+    for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++) {
+      ctx.fillStyle = mat[r][c] === 1 ? dark : light;
+      ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
+    }
+    return true;
+  }
+
+  return { draw };
+})();
+
+
+function renderQrCode() {
+  const url = buildTokenUrl();
+  document.getElementById('qrUrl').textContent = url;
+  document.getElementById('qrSlotBadge').textContent = '🕐 ' + getSlotName();
+
+  // Ensure we have a canvas (not a replaced div from old code)
+  let canvas = document.getElementById('qrCanvas');
+  if (!canvas || canvas.tagName !== 'CANVAS') {
+    canvas = document.createElement('canvas');
+    canvas.id = 'qrCanvas';
+    canvas.width = 200; canvas.height = 200;
+    canvas.style.cssText = 'border-radius:12px;border:2px solid var(--border2);display:block;';
+    const old = document.getElementById('qrCanvas') || document.getElementById('qrCodeDiv');
+    if (old) old.replaceWith(canvas);
+  }
+  canvas.width = 200; canvas.height = 200;
+
+  const ok = QRGen.draw(canvas, url, '#2E308E', '#ffffff');
+  if (!ok) {
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f0f2f8'; ctx.fillRect(0,0,200,200);
+    ctx.fillStyle = '#2E308E'; ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('URL too long for v3', 100, 95);
+    ctx.fillText('Copy link above', 100, 115);
+  }
+}
+
+function copyQrUrl() {
+  const url = buildTokenUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  }).catch(() => {
+    prompt('Copy this link:', url);
+  });
+}
+
+function downloadQr() {
+  const canvas = document.getElementById('qrCanvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = `mystery-seat-qr-${getExpectedToken()}.png`;
+  a.click();
+}
+
+// Countdown timer for QR refresh
+let _qrCountdownTimer = null;
+function startQrCountdown() {
+  clearInterval(_qrCountdownTimer);
+  function tick() {
+    const ms = getMsUntilNextSlot();
+    const h  = Math.floor(ms / 3600000);
+    const m  = Math.floor((ms % 3600000) / 60000);
+    const s  = Math.floor((ms % 60000) / 1000);
+    const el = document.getElementById('qrCountdown');
+    if (el) el.textContent = `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+    // Auto-refresh QR when slot changes
+    if (ms < 1000) { setTimeout(() => { renderQrCode(); startQrCountdown(); }, 1100); }
+  }
+  tick();
+  _qrCountdownTimer = setInterval(tick, 1000);
+}
+
 function showPocDashboard() {
   document.getElementById('publicPage').style.display = 'none';
   document.getElementById('locationPage').style.display = 'none';
   const dash = document.getElementById('pocPage');
   dash.classList.add('show');
+  renderQrCode();
+  startQrCountdown();
 
   const nextReset = new Date();
   nextReset.setHours(6, 0, 0, 0);
@@ -616,12 +1121,11 @@ function renderPocTable() {
       <td>${b.empId}</td>
       <td><span class="tag">${b.location||'—'}</span></td>
       <td><span class="tag">${b.cardLabel}</span></td>
-      <td><span class="tag">Seat ${b.seat}</span></td>
     </tr>`).join('');
 
   document.getElementById('pocTableBody').innerHTML = `
     <table>
-      <thead><tr><th>#</th><th>Name</th><th>Employee ID</th><th>Location</th><th>Table</th><th>Seat</th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Employee ID</th><th>Location</th><th>Table</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
@@ -635,14 +1139,13 @@ function downloadExcel() {
   if (!allBookings.length) { alert('No bookings to export.'); return; }
 
   const BOM = '\uFEFF';
-  const headers = ['#', 'Name', 'Employee ID', 'Location', 'Table', 'Seat No.'];
+  const headers = ['#', 'Name', 'Employee ID', 'Location', 'Table'];
   const rows = allBookings.map((b, i) => [
     i + 1,
     `"${b.name.replace(/"/g,'""')}"`,
     `"${b.empId}"`,
     `"${b.location||'—'}"`,
     `"${b.cardLabel}"`,
-    `"Seat ${b.seat}"`
   ].join(','));
 
   const csv = BOM + [headers.join(','), ...rows].join('\r\n');
@@ -802,22 +1305,98 @@ async function submitForm() {
   saveState(state);
   updateStats();
 
-  await new Promise(r => setTimeout(r, 700));
-  showResultView(booking, def);
+  await new Promise(r => setTimeout(r, 400));
+  showSlotMachine(booking, def, () => showResultView(booking, def));
+}
+
+
+// ── SLOT MACHINE GAME ────────────────────────────────────────
+function showSlotMachine(booking, def, onDone) {
+  const card = document.getElementById('mainCard');
+  card.className = 'mystery-card expanded';
+  card.onclick = null;
+
+  const tableSymbols = ['T1','T2','T3','T4','T5','T6','N1','N2','N3','C1','C2'];
+  const emojiList    = ['🎲','🎯','🎰','⭐','🔥','💫','🎊','✨'];
+
+  function makeReel(symbols, finalVal, reelId) {
+    // Build a long list ending with finalVal
+    const count = 24;
+    const items = [];
+    for (let i = 0; i < count - 1; i++) {
+      items.push(symbols[Math.floor(Math.random() * symbols.length)]);
+    }
+    items.push(finalVal);
+    return `
+      <div class="slot-reel-col">
+        <div class="slot-reel-wrap" id="wrap-${reelId}">
+          <div class="slot-reel" id="reel-${reelId}">
+            ${items.map((s, i) => `<div class="slot-symbol${i===items.length-1?' accent':''}">${s}</div>`).join('')}
+          </div>
+        </div>
+        <div class="slot-label">${reelId === 'loc' ? 'Location' : reelId === 'tbl' ? 'Table' : 'Seat'}</div>
+      </div>`;
+  }
+
+  const locFinal  = booking.location;
+  const tableFinal = def.label.replace('Table ', '');
+
+  document.getElementById('cardBody').innerHTML = `
+    <div class="slot-view">
+      <div class="slot-title">🎰 Finding your seat…</div>
+      <div class="slot-machine">
+        ${makeReel([booking.location], locFinal, 'loc')}
+        ${makeReel(tableSymbols, tableFinal, 'tbl')}
+      </div>
+    </div>`;
+
+  // Animate each reel with staggered delays
+  function spinReel(reelId, delay, duration) {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const reel = document.getElementById('reel-' + reelId);
+        const wrap = document.getElementById('wrap-' + reelId);
+        if (!reel || !wrap) { resolve(); return; }
+        const itemH = 80;
+        const total = reel.children.length;
+        const targetY = -((total - 1) * itemH);
+
+        // Fast scroll then ease to final
+        reel.style.transition = `transform ${duration}ms cubic-bezier(.15,.8,.35,1)`;
+        reel.style.transform  = `translateY(${targetY}px)`;
+
+        setTimeout(() => {
+          if (wrap) wrap.classList.add('slot-win-flash');
+          resolve();
+        }, duration + 80);
+      }, delay);
+    });
+  }
+
+  Promise.all([
+    spinReel('loc',  0,    900),
+    spinReel('tbl',  320,  1100),
+  ]).then(() => {
+    // Show win message briefly then reveal result
+    setTimeout(() => {
+      const sv = document.querySelector('.slot-view');
+      if (sv) {
+        const titleEl = sv.querySelector('.slot-title');
+        if (titleEl) {
+          titleEl.innerHTML = '<span class="slot-emoji-row">🎉 ✨ 🎊</span><br>Seat Locked In!';
+          titleEl.style.color = 'var(--accent)';
+          titleEl.style.fontSize = '14px';
+        }
+      }
+      setTimeout(onDone, 1100);
+    }, 800);
+  });
 }
 
 function showResultView(b, def) {
   const card = document.getElementById('mainCard');
   card.className = 'mystery-card expanded';
   card.onclick = null;
-
-  const bookedForCard = bookedFor(def.id);
-  let pipsHtml = '';
-  for (let i = 0; i < def.seats; i++) {
-    if (i === b.seat - 1) pipsHtml += `<div class="res-pip this"></div>`;
-    else if (i < bookedForCard) pipsHtml += `<div class="res-pip booked"></div>`;
-    else pipsHtml += `<div class="res-pip"></div>`;
-  }
 
   const seatsLeft = availFor(def);
   const seatsLeftText = seatsLeft > 0
@@ -832,13 +1411,11 @@ function showResultView(b, def) {
       <div class="result-label">Your assigned card</div>
       <div class="result-heading">YOU'RE BOOKED!</div>
       <div class="result-sub">${seatsLeftText}</div>
-      <div class="result-pips">${pipsHtml}</div>
       <div class="detail-grid">
         <div class="detail-row"><span class="dk">LOCATION</span><span class="dv" style="color:var(--accent)">${b.location || '—'}</span></div>
         <div class="detail-row"><span class="dk">NAME</span><span class="dv">${b.name}</span></div>
         <div class="detail-row"><span class="dk">EMPLOYEE ID</span><span class="dv">${b.empId}</span></div>
         <div class="detail-row"><span class="dk">TABLE</span><span class="dv" style="color:var(--accent)">${b.cardLabel}</span></div>
-        <div class="detail-row"><span class="dk">SEAT NO.</span><span class="dv" style="color:var(--accent)">Seat ${b.seat}</span></div>
       </div>
       <div class="done-btn-wrap" style="animation:fadeUp .4s .36s ease both">
         <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px;">
