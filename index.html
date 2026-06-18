@@ -415,7 +415,7 @@
 <div class="page" id="publicPage" style="display:none">
 
   <header class="header">
-    <div class="logo">MYSTERY<br><span>SEAT</span></div>
+    <div class="logo" id="headerLogo">MYSTERY<br><span>SEAT</span></div>
     <div class="meta">
       <strong id="statFilled">0/24</strong>
       seats filled<br>
@@ -703,7 +703,7 @@ function selectLocation(loc) {
   selectedLocation = loc;
   document.getElementById('locationPage').style.display = 'none';
   document.getElementById('publicPage').style.display = '';
-  if (availableCards().length) showIdleView();
+  if (availableCards().length) showFormView();
   else showAllDoneView();
 }
 let pocLoggedIn = false;
@@ -766,19 +766,16 @@ function manualReset() {
   state['Neon'] = emptyLocState();
   state.lastReset = getTodayResetKey();
   saveState(state);
-  if (selectedLocation && availableCards().length) showIdleView();
-  else if (selectedLocation) showAllDoneView();
+  selectedLocation = null;
   showPocDashboard();
 }
 
 function logoutPoc() {
   pocLoggedIn = false;
   document.getElementById('pocPage').classList.remove('show');
-  if (selectedLocation) {
-    document.getElementById('publicPage').style.display = '';
-  } else {
-    document.getElementById('locationPage').style.display = '';
-  }
+  selectedLocation = null;
+  document.getElementById('publicPage').style.display = 'none';
+  document.getElementById('locationPage').style.display = '';
 }
 
 // ── POC DASHBOARD ────────────────────────────────────────────
@@ -1005,6 +1002,10 @@ function downloadExcel() {
 // ── PUBLIC PAGE ───────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statFilled').textContent = `${totalBooked()}/${TOTAL_SEATS()}`;
+  const logoEl = document.getElementById('headerLogo');
+  if (logoEl && selectedLocation) logoEl.innerHTML = selectedLocation === 'Neon'
+    ? '🌟<br><span>' + selectedLocation + '</span>'
+    : '🏢<br><span>' + selectedLocation + '</span>';
 }
 
 function buildPips(containerId) {
@@ -1070,7 +1071,7 @@ function showFormView() {
   document.getElementById('cardBody').innerHTML = `
     <div class="expanded-view">
       <div class="exp-top">
-        <div class="exp-title">Enter Details</div>
+        <div class="exp-title">${selectedLocation}</div>
         <button class="exp-close" onclick="cancelForm()">✕</button>
       </div>
       <div class="step-dots">
@@ -1098,8 +1099,9 @@ function showFormView() {
 }
 
 function cancelForm() {
-  if (availableCards().length) showIdleView();
-  else showAllDoneView();
+  selectedLocation = null;
+  document.getElementById('publicPage').style.display = 'none';
+  document.getElementById('locationPage').style.display = '';
 }
 
 function onEmpIdInput() {
