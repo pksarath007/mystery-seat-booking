@@ -607,8 +607,6 @@ function scheduleNextReset() {
   const msUntil = next - now;
   setTimeout(() => {
     state = checkAndApplyDailyReset(state);
-    if (availableCards().length) showIdleView();
-    else showAllDoneView();
     scheduleNextReset();
   }, msUntil);
 }
@@ -945,14 +943,13 @@ function renderPocTable() {
     <tr>
       <td style="color:var(--text3)">${i + 1}</td>
       <td class="td-name">${b.name}</td>
-      <td>${b.empId}</td>
       <td><span class="tag">${b.location||'—'}</span></td>
       <td><span class="tag">${b.cardLabel}</span></td>
     </tr>`).join('');
 
   document.getElementById('pocTableBody').innerHTML = `
     <table>
-      <thead><tr><th>#</th><th>Name</th><th>Employee ID</th><th>Location</th><th>Table</th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Location</th><th>Table</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
@@ -966,11 +963,10 @@ function downloadExcel() {
   if (!allBookings.length) { alert('No bookings to export.'); return; }
 
   const BOM = '\uFEFF';
-  const headers = ['#', 'Name', 'Employee ID', 'Location', 'Table'];
+  const headers = ['#', 'Name', 'Location', 'Table'];
   const rows = allBookings.map((b, i) => [
     i + 1,
     `"${b.name.replace(/"/g,'""')}"`,
-    `"${b.empId}"`,
     `"${b.location||'—'}"`,
     `"${b.cardLabel}"`,
   ].join(','));
@@ -1057,25 +1053,15 @@ function showFormView() {
         <div class="exp-title">${selectedLocation}</div>
         <button class="exp-close" onclick="cancelForm()">✕</button>
       </div>
-      <div class="step-dots">
-        <div class="step-dot active"></div>
-        <div class="step-dot"></div>
-      </div>
-      <div class="dupe-warn" id="dupeWarn">⚠ This Employee ID has already been used.</div>
       <div class="field" id="ff-name">
         <label>Full Name</label>
-        <input type="text" id="inp-name" placeholder="Enter your full name" autocomplete="off" />
+        <input type="text" id="inp-name" placeholder="Enter your full name" autocomplete="off"
+          onkeydown="if(event.key==='Enter')submitForm()" />
         <div class="err">Please enter your name.</div>
-      </div>
-      <div class="field" id="ff-empid">
-        <label>Employee ID</label>
-        <input type="text" id="inp-empid" placeholder="e.g. EMP001234" maxlength="20" autocomplete="off"
-          oninput="onEmpIdInput()" onkeydown="if(event.key==='Enter')submitForm()" />
-        <div class="err">Please enter your Employee ID.</div>
       </div>
       <button class="btn-primary" id="submitBtn" onclick="submitForm()">
         <span class="spinner" id="btnSpinner"></span>
-        <span id="btnLabel">Reveal My Card →</span>
+        <span id="btnLabel">Claim My Seat →</span>
       </button>
     </div>`;
   document.getElementById('inp-name').focus();
@@ -1087,29 +1073,11 @@ function cancelForm() {
   document.getElementById('locationPage').style.display = '';
 }
 
-function onEmpIdInput() {
-  const empId = document.getElementById('inp-empid').value.trim();
-  const used  = empId.length >= 2 && !!(locState().empIds?.[empId]);
-  document.getElementById('dupeWarn').style.display = used ? 'block' : 'none';
-  document.getElementById('submitBtn').disabled = used;
-  document.getElementById('ff-empid').classList.remove('bad');
-}
 
 async function submitForm() {
-  const name  = document.getElementById('inp-name').value.trim();
-  const empId = document.getElementById('inp-empid').value.trim();
-  let ok = true;
+  const name = document.getElementById('inp-name').value.trim();
   document.getElementById('ff-name').classList.remove('bad');
-  document.getElementById('ff-empid').classList.remove('bad');
-  if (!name)  { document.getElementById('ff-name').classList.add('bad');  ok = false; }
-  if (!empId) { document.getElementById('ff-empid').classList.add('bad'); ok = false; }
-  if (!ok) return;
-
-  if (locState().empIds?.[empId]) {
-    document.getElementById('dupeWarn').style.display = 'block';
-    document.getElementById('submitBtn').disabled = true;
-    return;
-  }
+  if (!name) { document.getElementById('ff-name').classList.add('bad'); return; }
 
   const def  = pickRandomCard();
   if (!def) { showAllDoneView(); return; }
@@ -1120,15 +1088,12 @@ async function submitForm() {
   document.getElementById('btnSpinner').style.display = 'block';
   document.getElementById('btnLabel').textContent = 'Assigning…';
 
-  const now = new Date();
   const booking = {
-    name, empId, seat, location: selectedLocation,
+    name, seat, location: selectedLocation,
     cardId: def.id, cardLabel: def.label,
   };
 
   locState().bookings.push(booking);
-  if (!state[selectedLocation].empIds) state[selectedLocation].empIds = {};
-  state[selectedLocation].empIds[empId] = true;
   saveState(state);
   updateStats();
 
@@ -1241,7 +1206,6 @@ function showResultView(b, def) {
       <div class="detail-grid">
         <div class="detail-row"><span class="dk">LOCATION</span><span class="dv" style="color:var(--accent)">${b.location || '—'}</span></div>
         <div class="detail-row"><span class="dk">NAME</span><span class="dv">${b.name}</span></div>
-        <div class="detail-row"><span class="dk">EMPLOYEE ID</span><span class="dv">${b.empId}</span></div>
         <div class="detail-row"><span class="dk">TABLE</span><span class="dv" style="color:var(--accent)">${b.cardLabel}</span></div>
       </div>
       <div class="done-btn-wrap" style="animation:fadeUp .4s .36s ease both">
@@ -1269,7 +1233,7 @@ function startRedirectCountdown() {
 }
 
 function afterDone() {
-  if (availableCards().length) showIdleView();
+  if (availableCards().length) showFormView();
   else showAllDoneView();
 }
 
