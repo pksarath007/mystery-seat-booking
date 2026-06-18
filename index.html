@@ -390,10 +390,10 @@
 
 <!-- LOCATION PICKER -->
 <div id="locationPage">
-  <div class="loc-header">
+  <div class="loc-page">
+  <div style="position:absolute;top:20px;right:20px;z-index:10;">
     <a class="poc-btn" onclick="openLoginOverlay()">🔒 POC Login</a>
   </div>
-  <div class="loc-page">
         <div class="loc-title">Choose Your Location</div>
     <div class="loc-sub">Select the venue you're attending.</div>
     <div class="loc-cards">
@@ -412,17 +412,6 @@
 </div>
 
 <div class="page" id="publicPage" style="display:none">
-
-  <header class="header">
-    <div class="logo" id="headerLogo"></div>
-    <div class="meta">
-      <strong id="statFilled">0/24</strong>
-      seats filled<br>
-      
-      <br>
-      <a class="poc-btn" onclick="openLoginOverlay()">🔒 POC Login</a>
-    </div>
-  </header>
 
   <div class="card-wrap">
     <div class="mystery-card idle" id="mainCard">
@@ -1000,11 +989,6 @@ function downloadExcel() {
 
 // ── PUBLIC PAGE ───────────────────────────────────────────────
 function updateStats() {
-  document.getElementById('statFilled').textContent = `${totalBooked()}/${TOTAL_SEATS()}`;
-  const logoEl = document.getElementById('headerLogo');
-  if (logoEl && selectedLocation) logoEl.innerHTML = selectedLocation === 'Neon'
-    ? '🌟<br><span>' + selectedLocation + '</span>'
-    : '🏢<br><span>' + selectedLocation + '</span>';
 }
 
 function buildPips(containerId) {
