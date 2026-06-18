@@ -814,11 +814,13 @@ function getMsUntilNextSlot() {
 }
 
 // ── Tiny QR renderer using a public CDN ──
-// ── SELF-CONTAINED QR CODE ENGINE (Version 5, ECC M) ────────
-// Handles URLs up to ~80 bytes. No external dependencies.
+// ── SELF-CONTAINED QR CODE ENGINE (Version 6, ECC M) ────────
+// Handles URLs up to ~120 bytes. No external dependencies.
+// QR Version 6: 41×41, ECC Level M
+// Data capacity: 84 codewords | EC: 18 per block × 2 blocks = 36 codewords
 
 const QRGen = (() => {
-  // GF(256) tables
+  // ── GF(256) arithmetic ──
   const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
   (() => {
     let v = 1;
@@ -851,126 +853,149 @@ const QRGen = (() => {
     return msg.slice(data.length);
   }
 
-  // Version 5, ECC M: 37×37, 62 data codewords, 36 EC codewords
-  const SZ = 37, DCAP = 62, ECCAP = 36;
+  // ── Version 6, ECC M constants ──
+  const SZ   = 41;   // matrix size
+  const DCAP = 84;   // total data codewords
+  const EC_PER_BLOCK = 18;
+  const BLOCKS = 2;
+  // Each block: 42 data codewords, 18 EC codewords
+  const BLOCK_SIZE = DCAP / BLOCKS; // 42
 
+  // ── Encode text into data codewords ──
   function encodeData(text) {
     const bytes = [...new TextEncoder().encode(text)];
-    if (bytes.length > 47) throw new Error('URL too long');
     const bits = [];
     const push = (v, n) => { for (let i = n - 1; i >= 0; i--) bits.push((v >> i) & 1); };
-    push(0b0100, 4);   // byte mode
-    push(bytes.length, 8);
+    push(0b0100, 4);        // byte mode indicator
+    push(bytes.length, 8);  // character count
     bytes.forEach(b => push(b, 8));
-    push(0, 4);        // terminator
+    push(0, 4);             // terminator
     while (bits.length % 8) bits.push(0);
     const cw = [];
     for (let i = 0; i < bits.length; i += 8)
       cw.push(bits.slice(i, i + 8).reduce((a, b, j) => a | (b << (7 - j)), 0));
     const pad = [0xEC, 0x11];
     while (cw.length < DCAP) cw.push(pad[cw.length % 2]);
+    if (cw.length > DCAP) throw new Error('URL too long for QR v6');
     return cw;
   }
 
-  function buildMatrix(data) {
-    const ec = rsEncode(data, ECCAP);
-    const allCW = [...data, ...ec];
-    const bits = [];
-    allCW.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+  // ── Interleave two blocks + their EC ──
+  function interleave(data) {
+    const b1 = data.slice(0, BLOCK_SIZE);
+    const b2 = data.slice(BLOCK_SIZE);
+    const ec1 = rsEncode(b1, EC_PER_BLOCK);
+    const ec2 = rsEncode(b2, EC_PER_BLOCK);
+    const out = [];
+    // Interleave data blocks
+    for (let i = 0; i < BLOCK_SIZE; i++) { out.push(b1[i]); out.push(b2[i]); }
+    // Interleave EC blocks
+    for (let i = 0; i < EC_PER_BLOCK; i++) { out.push(ec1[i]); out.push(ec2[i]); }
+    return out;
+  }
 
-    // -1 = empty, -2 = reserved (format/finder), 0 = light, 1 = dark
+  // ── Build the QR matrix ──
+  function buildMatrix(data) {
+    const all = interleave(data);
+    const bits = [];
+    all.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+    // Remainder bits for version 6 = 0 (none needed)
+
+    // Matrix: 0=light, 1=dark, -1=free, -2=reserved
     const mat = Array.from({ length: SZ }, () => new Int8Array(SZ).fill(-1));
     const set = (r, c, v) => { if (r >= 0 && r < SZ && c >= 0 && c < SZ) mat[r][c] = v; };
+    const isSet = (r, c) => r >= 0 && r < SZ && c >= 0 && c < SZ && mat[r][c] !== -1;
 
-    // Finder pattern at (row, col) — top-left corner of 7×7 pattern
+    // ── Finder patterns (7×7) + separators ──
     const finder = (row, col) => {
       for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
-        if (r === -1 || r === 7 || c === -1 || c === 7) { set(row + r, col + c, 0); continue; }
-        const inner = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
-        set(row + r, col + c, (r === 0 || r === 6 || c === 0 || c === 6 || inner) ? 1 : 0);
+        const onBorder = (r === -1 || r === 7 || c === -1 || c === 7);
+        const onRing   = (r === 0 || r === 6 || c === 0 || c === 6);
+        const onCore   = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        if (onBorder) set(row + r, col + c, 0);
+        else set(row + r, col + c, (onRing || onCore) ? 1 : 0);
       }
     };
     finder(0, 0); finder(0, SZ - 7); finder(SZ - 7, 0);
 
-    // Alignment patterns for version 5: at rows/cols [6, 30]
-    // All combos except those overlapping finders: (6,6),(6,30),(30,6),(30,30)
-    // Finders are at corners so skip (6,6),(0,0)... actual alignments:
-    const alignPos = [6, 30];
-    for (let ar of alignPos) for (let ac of alignPos) {
-      // Skip if overlaps finder
-      if ((ar <= 7 && ac <= 7) || (ar <= 7 && ac >= SZ - 8) || (ar >= SZ - 8 && ac <= 7)) continue;
+    // ── Alignment patterns for version 6: positions [6, 34] ──
+    const AL = [6, 34];
+    for (const ar of AL) for (const ac of AL) {
+      if ((ar <= 8 && ac <= 8) || (ar <= 8 && ac >= SZ - 9) || (ar >= SZ - 9 && ac <= 8)) continue;
+      if (isSet(ar, ac)) continue;
       for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
         set(ar + dr, ac + dc, (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (!dr && !dc)) ? 1 : 0);
     }
 
-    // Timing strips
+    // ── Timing strips ──
     for (let i = 8; i < SZ - 8; i++) {
-      if (mat[6][i] === -1) set(6, i, i % 2 === 0 ? 1 : 0);
-      if (mat[i][6] === -1) set(i, 6, i % 2 === 0 ? 1 : 0);
+      if (mat[6][i] < 0) set(6, i, i % 2 === 0 ? 1 : 0);
+      if (mat[i][6] < 0) set(i, 6, i % 2 === 0 ? 1 : 0);
     }
 
-    // Dark module
+    // ── Dark module ──
     set(SZ - 8, 8, 1);
 
-    // Reserve format info areas
+    // ── Reserve format info areas ──
     for (let i = 0; i <= 8; i++) {
-      if (mat[8][i] === -1) mat[8][i] = -2;
-      if (mat[i][8] === -1) mat[i][8] = -2;
+      if (mat[8][i] < 0) mat[8][i] = -2;
+      if (mat[i][8] < 0) mat[i][8] = -2;
     }
     for (let i = SZ - 7; i < SZ; i++) {
-      if (mat[8][i] === -1) mat[8][i] = -2;
-      if (mat[i][8] === -1) mat[i][8] = -2;
+      if (mat[8][i] < 0) mat[8][i] = -2;
+      if (mat[i][8] < 0) mat[i][8] = -2;
     }
     mat[SZ - 8][8] = -2;
 
-    // Data placement — zigzag right-to-left in 2-column strips
+    // ── Place data bits (zigzag columns) ──
     let bi = 0;
     for (let right = SZ - 1; right > 0; right -= 2) {
       if (right === 6) right = 5;
-      const up = (Math.floor((SZ - 1 - right) / 2) % 2 === 0);
+      const goUp = (Math.floor((SZ - 1 - right) / 2) % 2 === 0);
       for (let vert = 0; vert < SZ; vert++) {
-        const row = up ? (SZ - 1 - vert) : vert;
+        const row = goUp ? (SZ - 1 - vert) : vert;
         for (let j = 0; j < 2; j++) {
           const col = right - j;
-          if (mat[row][col] < 0 && mat[row][col] !== -2) {
+          if (mat[row][col] === -1) {
             mat[row][col] = bi < bits.length ? bits[bi++] : 0;
           }
         }
       }
     }
 
-    // Apply mask 2: row % 3 == 0
+    // ── Apply mask pattern 1: (row % 2 == 0) ──
     for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++)
-      if (mat[r][c] >= 0 && r % 3 === 0) mat[r][c] ^= 1;
+      if (mat[r][c] >= 0 && r % 2 === 0) mat[r][c] ^= 1;
 
-    // Format info for ECC M, mask 2 = 101111100110010 (after XOR with 101010000010010)
-    // Precomputed: M=2(10), mask=2(010), raw=10_010 → after BCH+XOR = 100111101010001 reversed
-    const fmtStr = '100111101010001';  // ECC M, mask 2
-    const fb = fmtStr.split('').map(Number);
-    // Bottom-left and top-right format areas
-    const fmtCoords1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
-    const fmtCoords2 = [[SZ-1,8],[SZ-2,8],[SZ-3,8],[SZ-4,8],[SZ-5,8],[SZ-6,8],[SZ-7,8],[SZ-8,8],[8,SZ-8],[8,SZ-7],[8,SZ-6],[8,SZ-5],[8,SZ-4],[8,SZ-3],[8,SZ-2]];
-    fb.forEach((v,i)=>{set(fmtCoords1[i][0],fmtCoords1[i][1],v);set(fmtCoords2[i][0],fmtCoords2[i][1],v);});
+    // ── Format info: ECC M (10), mask 1 (001) ──
+    // Precomputed format string for M+mask1: 101000100100101
+    const fmtBits = '101000100100101'.split('').map(Number);
+    const fc1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+    const fc2 = [[SZ-1,8],[SZ-2,8],[SZ-3,8],[SZ-4,8],[SZ-5,8],[SZ-6,8],[SZ-7,8],[SZ-8,8],
+                 [8,SZ-8],[8,SZ-7],[8,SZ-6],[8,SZ-5],[8,SZ-4],[8,SZ-3],[8,SZ-2]];
+    fmtBits.forEach((v, i) => { set(fc1[i][0], fc1[i][1], v); set(fc2[i][0], fc2[i][1], v); });
 
     return mat;
   }
 
+  // ── Draw QR onto a canvas element ──
   function draw(canvasEl, text, dark = '#2E308E', light = '#ffffff') {
     let data;
-    try { data = encodeData(text); }
-    catch (e) {
+    try {
+      data = encodeData(text);
+    } catch (e) {
       const ctx = canvasEl.getContext('2d');
       ctx.fillStyle = light; ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
-      ctx.fillStyle = dark; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = dark; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
       ctx.fillText('URL too long', canvasEl.width / 2, canvasEl.height / 2 - 8);
       ctx.fillText('Copy link above', canvasEl.width / 2, canvasEl.height / 2 + 10);
       return false;
     }
     const mat = buildMatrix(data);
-    const sz = canvasEl.width;
-    const cell = Math.floor((sz - 8) / SZ);
-    const off = Math.floor((sz - cell * SZ) / 2);
-    const ctx = canvasEl.getContext('2d');
+    const sz  = canvasEl.width;
+    const cell = Math.floor((sz - 16) / SZ);  // 8px quiet zone each side
+    const off  = Math.floor((sz - cell * SZ) / 2);
+    const ctx  = canvasEl.getContext('2d');
     ctx.fillStyle = light; ctx.fillRect(0, 0, sz, sz);
     for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++) {
       ctx.fillStyle = mat[r][c] === 1 ? dark : light;
@@ -981,6 +1006,7 @@ const QRGen = (() => {
 
   return { draw };
 })();
+
 
 
 function renderQrCode() {
@@ -1006,7 +1032,7 @@ function renderQrCode() {
     ctx.fillStyle = '#f0f2f8'; ctx.fillRect(0,0,200,200);
     ctx.fillStyle = '#2E308E'; ctx.font = '12px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('URL too long for v3', 100, 95);
+    ctx.fillText('URL too long', 100, 95);
     ctx.fillText('Copy link above', 100, 115);
   }
 }
