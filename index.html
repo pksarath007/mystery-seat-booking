@@ -484,6 +484,7 @@
         <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);margin-top:2px;">
           POC view · All Locations
           &nbsp;·&nbsp; <span id="lastResetInfo" style="color:var(--accent)"></span>
+          &nbsp;·&nbsp; <span id="syncStatus" style="font-size:10px;"></span>
         </div>
       </div>
       <div class="poc-actions">
@@ -491,6 +492,18 @@
         <button class="btn-ghost" onclick="manualReset()" style="border-color:rgba(255,107,107,.3);color:var(--danger)" title="Clear all bookings and reset cards">↺ Reset</button>
         <button class="btn-logout" onclick="logoutPoc()">Logout</button>
       </div>
+    </div>
+
+    <!-- JSONBin setup banner (hidden once configured) -->
+    <div id="jsonbinBanner" style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);
+      border-radius:14px;padding:16px 20px;margin-bottom:20px;font-family:'DM Mono',monospace;font-size:11px;
+      color:#92400e;line-height:1.8;">
+      <strong style="font-size:13px;">⚙️ JSONBin Setup Required</strong><br>
+      To sync bookings across all devices:<br>
+      1. Go to <a href="https://jsonbin.io" target="_blank" style="color:var(--accent2);">jsonbin.io</a> → Sign up free<br>
+      2. Create a new Bin with: <code style="background:rgba(0,0,0,.06);padding:2px 6px;border-radius:4px;">{"MBP":{"bookings":[]},"Neon":{"bookings":[]},"lastReset":null}</code><br>
+      3. Copy your <strong>Master Key</strong> (Account → API Keys) and <strong>Bin ID</strong> (from bin URL)<br>
+      4. Open this HTML file → find <code style="background:rgba(0,0,0,.06);padding:2px 6px;border-radius:4px;">JSONBIN_API_KEY</code> and <code style="background:rgba(0,0,0,.06);padding:2px 6px;border-radius:4px;">JSONBIN_BIN_ID</code> → paste your values
     </div>
 
     <!-- QR Tool -->
@@ -600,19 +613,93 @@ const CARD_IMGS = {
 function CARD_DEFS() { return LOCATION_DEFS[selectedLocation] || []; }
 function TOTAL_SEATS() { return CARD_DEFS().reduce((s,c) => s + c.seats, 0); }
 
-// ── STATE ────────────────────────────────────────────────────
-function emptyLocState() { return { bookings:[], empIds:{} }; }
-function loadState() {
-  try {
-    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!s) return { MBP: emptyLocState(), Neon: emptyLocState(), lastReset: null };
-    // Migrate old flat state format
-    if (s.bookings && !s.MBP) return { MBP: { bookings: s.bookings, empIds: s.empIds||{} }, Neon: emptyLocState(), lastReset: s.lastReset||null };
-    return s;
-  } catch { return { MBP: emptyLocState(), Neon: emptyLocState(), lastReset: null }; }
-}
-function saveState(s) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch {} }
+// ── JSONBIN.IO DATABASE ──────────────────────────────────────
+// 1. Go to https://jsonbin.io and create a FREE account
+// 2. Create a new Bin with this initial JSON: {"MBP":{"bookings":[]},"Neon":{"bookings":[]},"lastReset":null}
+// 3. Paste your Master Key and Bin ID below
+const JSONBIN_API_KEY  = '$2a$10$REPLACE_WITH_YOUR_MASTER_KEY';  // from Account > API Keys
+const JSONBIN_BIN_ID   = 'REPLACE_WITH_YOUR_BIN_ID';            // from your bin URL
+const JSONBIN_BASE     = 'https://api.jsonbin.io/v3/b';
+
+function emptyLocState() { return { bookings: [] }; }
 function locState() { return state[selectedLocation] || emptyLocState(); }
+
+// Show/hide a subtle sync indicator
+function setSyncStatus(msg, color) {
+  let el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--text3)';
+}
+
+// Load state from JSONBin
+async function loadState() {
+  if (JSONBIN_BIN_ID === 'REPLACE_WITH_YOUR_BIN_ID') {
+    console.warn('JSONBin not configured — using local state');
+    return { MBP: emptyLocState(), Neon: emptyLocState(), lastReset: null };
+  }
+  try {
+    setSyncStatus('⟳ Syncing…');
+    const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_API_KEY }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const s = data.record;
+    if (!s.MBP)  s.MBP  = emptyLocState();
+    if (!s.Neon) s.Neon = emptyLocState();
+    setSyncStatus('✓ Synced', 'var(--success)');
+    setTimeout(() => setSyncStatus(''), 2000);
+    return s;
+  } catch(e) {
+    console.error('loadState error:', e);
+    setSyncStatus('⚠ Offline', 'var(--danger)');
+    return { MBP: emptyLocState(), Neon: emptyLocState(), lastReset: null };
+  }
+}
+
+// Save state to JSONBin
+async function saveState(s) {
+  if (JSONBIN_BIN_ID === 'REPLACE_WITH_YOUR_BIN_ID') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); // fallback
+    return;
+  }
+  try {
+    setSyncStatus('⟳ Saving…');
+    const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY,
+        'X-Bin-Versioning': 'false'
+      },
+      body: JSON.stringify(s)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setSyncStatus('✓ Saved', 'var(--success)');
+    setTimeout(() => setSyncStatus(''), 2000);
+  } catch(e) {
+    console.error('saveState error:', e);
+    setSyncStatus('⚠ Save failed', 'var(--danger)');
+  }
+}
+
+// Poll for updates every 15 seconds when POC dashboard is open
+let _pollTimer = null;
+function startPolling() {
+  stopPolling();
+  _pollTimer = setInterval(async () => {
+    if (!document.getElementById('pocPage')?.classList.contains('show')) return;
+    const fresh = await loadState();
+    state = fresh;
+    renderPocStats();
+    renderCardBreakdown();
+    renderPocTable();
+  }, 15000);
+}
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+}
 
 // ── DAILY 6AM RESET ──────────────────────────────────────────
 function getTodayResetKey() {
@@ -710,8 +797,7 @@ function bypassGateForPoc() {
   document.getElementById('tokenGate').style.display = 'none';
 }
 
-let state = checkAndApplyDailyReset(loadState());
-scheduleNextReset();
+let state = { MBP: emptyLocState(), Neon: emptyLocState(), lastReset: null };
 
 // Gate check — hide public UI until token validated
 const _tokenValid = checkTokenGate();
@@ -719,6 +805,13 @@ if (!_tokenValid) {
   document.getElementById('locationPage').style.display = 'none';
   document.getElementById('publicPage').style.display = 'none';
 }
+
+// Async init — load from JSONBin then apply daily reset
+(async () => {
+  const loaded = await loadState();
+  state = checkAndApplyDailyReset(loaded);
+  scheduleNextReset();
+})();
 
 function selectLocation(loc) {
   selectedLocation = loc;
@@ -793,6 +886,7 @@ function manualReset() {
 
 function logoutPoc() {
   pocLoggedIn = false;
+  stopPolling();
   document.getElementById('pocPage').classList.remove('show');
   selectedLocation = null;
   document.getElementById('publicPage').style.display = 'none';
@@ -942,6 +1036,14 @@ function showPocDashboard() {
   dash.classList.add('show');
   renderQrCode();
   startQrCountdown();
+  startPolling();
+  // Refresh state from server when dashboard opens
+  loadState().then(fresh => {
+    state = fresh;
+    renderPocStats();
+    renderCardBreakdown();
+    renderPocTable();
+  });
 
   const nextReset = new Date();
   nextReset.setHours(6, 0, 0, 0);
@@ -956,6 +1058,9 @@ function showPocDashboard() {
 }
 
 function renderPocStats() {
+  // Hide setup banner if JSONBin is configured
+  const banner = document.getElementById('jsonbinBanner');
+  if (banner) banner.style.display = (JSONBIN_BIN_ID === 'REPLACE_WITH_YOUR_BIN_ID') ? '' : 'none';
   ['MBP', 'Neon'].forEach(loc => {
     const locDefs = LOCATION_DEFS[loc];
     const locBookings = state[loc].bookings;
