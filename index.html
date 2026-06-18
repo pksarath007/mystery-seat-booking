@@ -361,7 +361,6 @@
   }
   .qr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .qr-right { flex-shrink: 0; }
-  #qrCanvas { border-radius: 12px; border: 2px solid var(--border2); display: block; }
   .qr-expires {
     font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3);
     margin-top: 8px; text-align: center;
@@ -494,7 +493,7 @@
         </div>
       </div>
       <div class="qr-right">
-        <canvas id="qrCanvas" width="140" height="140"></canvas>
+        <div id="qrWrap"></div>
         <div class="qr-expires">Refreshes in <span id="qrCountdown">—</span></div>
       </div>
     </div>
@@ -814,228 +813,38 @@ function getMsUntilNextSlot() {
 }
 
 // ── Tiny QR renderer using a public CDN ──
-// ── SELF-CONTAINED QR CODE ENGINE (Version 6, ECC M) ────────
-// Handles URLs up to ~120 bytes. No external dependencies.
-// QR Version 6: 41×41, ECC Level M
-// Data capacity: 84 codewords | EC: 18 per block × 2 blocks = 36 codewords
-
-const QRGen = (() => {
-  // ── GF(256) arithmetic ──
-  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
-  (() => {
-    let v = 1;
-    for (let i = 0; i < 255; i++) {
-      EXP[i] = v; LOG[v] = i;
-      v = (v << 1) ^ (v & 0x80 ? 0x11D : 0);
-    }
-    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
-  })();
-  const gmul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
-
-  function rsGen(n) {
-    let p = [1];
-    for (let i = 0; i < n; i++) {
-      const q = [1, EXP[i]], r = new Array(p.length + 1).fill(0);
-      for (let a = 0; a < p.length; a++)
-        for (let b = 0; b < q.length; b++) r[a + b] ^= gmul(p[a], q[b]);
-      p = r;
-    }
-    return p;
-  }
-
-  function rsEncode(data, n) {
-    const gen = rsGen(n);
-    const msg = [...data, ...new Array(n).fill(0)];
-    for (let i = 0; i < data.length; i++) {
-      const c = msg[i];
-      if (c) for (let j = 0; j < gen.length; j++) msg[i + j] ^= gmul(gen[j], c);
-    }
-    return msg.slice(data.length);
-  }
-
-  // ── Version 6, ECC M constants ──
-  const SZ   = 41;   // matrix size
-  const DCAP = 84;   // total data codewords
-  const EC_PER_BLOCK = 18;
-  const BLOCKS = 2;
-  // Each block: 42 data codewords, 18 EC codewords
-  const BLOCK_SIZE = DCAP / BLOCKS; // 42
-
-  // ── Encode text into data codewords ──
-  function encodeData(text) {
-    const bytes = [...new TextEncoder().encode(text)];
-    const bits = [];
-    const push = (v, n) => { for (let i = n - 1; i >= 0; i--) bits.push((v >> i) & 1); };
-    push(0b0100, 4);        // byte mode indicator
-    push(bytes.length, 8);  // character count
-    bytes.forEach(b => push(b, 8));
-    push(0, 4);             // terminator
-    while (bits.length % 8) bits.push(0);
-    const cw = [];
-    for (let i = 0; i < bits.length; i += 8)
-      cw.push(bits.slice(i, i + 8).reduce((a, b, j) => a | (b << (7 - j)), 0));
-    const pad = [0xEC, 0x11];
-    while (cw.length < DCAP) cw.push(pad[cw.length % 2]);
-    if (cw.length > DCAP) throw new Error('URL too long for QR v6');
-    return cw;
-  }
-
-  // ── Interleave two blocks + their EC ──
-  function interleave(data) {
-    const b1 = data.slice(0, BLOCK_SIZE);
-    const b2 = data.slice(BLOCK_SIZE);
-    const ec1 = rsEncode(b1, EC_PER_BLOCK);
-    const ec2 = rsEncode(b2, EC_PER_BLOCK);
-    const out = [];
-    // Interleave data blocks
-    for (let i = 0; i < BLOCK_SIZE; i++) { out.push(b1[i]); out.push(b2[i]); }
-    // Interleave EC blocks
-    for (let i = 0; i < EC_PER_BLOCK; i++) { out.push(ec1[i]); out.push(ec2[i]); }
-    return out;
-  }
-
-  // ── Build the QR matrix ──
-  function buildMatrix(data) {
-    const all = interleave(data);
-    const bits = [];
-    all.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
-    // Remainder bits for version 6 = 0 (none needed)
-
-    // Matrix: 0=light, 1=dark, -1=free, -2=reserved
-    const mat = Array.from({ length: SZ }, () => new Int8Array(SZ).fill(-1));
-    const set = (r, c, v) => { if (r >= 0 && r < SZ && c >= 0 && c < SZ) mat[r][c] = v; };
-    const isSet = (r, c) => r >= 0 && r < SZ && c >= 0 && c < SZ && mat[r][c] !== -1;
-
-    // ── Finder patterns (7×7) + separators ──
-    const finder = (row, col) => {
-      for (let r = -1; r <= 7; r++) for (let c = -1; c <= 7; c++) {
-        const onBorder = (r === -1 || r === 7 || c === -1 || c === 7);
-        const onRing   = (r === 0 || r === 6 || c === 0 || c === 6);
-        const onCore   = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
-        if (onBorder) set(row + r, col + c, 0);
-        else set(row + r, col + c, (onRing || onCore) ? 1 : 0);
-      }
-    };
-    finder(0, 0); finder(0, SZ - 7); finder(SZ - 7, 0);
-
-    // ── Alignment patterns for version 6: positions [6, 34] ──
-    const AL = [6, 34];
-    for (const ar of AL) for (const ac of AL) {
-      if ((ar <= 8 && ac <= 8) || (ar <= 8 && ac >= SZ - 9) || (ar >= SZ - 9 && ac <= 8)) continue;
-      if (isSet(ar, ac)) continue;
-      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
-        set(ar + dr, ac + dc, (Math.abs(dr) === 2 || Math.abs(dc) === 2 || (!dr && !dc)) ? 1 : 0);
-    }
-
-    // ── Timing strips ──
-    for (let i = 8; i < SZ - 8; i++) {
-      if (mat[6][i] < 0) set(6, i, i % 2 === 0 ? 1 : 0);
-      if (mat[i][6] < 0) set(i, 6, i % 2 === 0 ? 1 : 0);
-    }
-
-    // ── Dark module ──
-    set(SZ - 8, 8, 1);
-
-    // ── Reserve format info areas ──
-    for (let i = 0; i <= 8; i++) {
-      if (mat[8][i] < 0) mat[8][i] = -2;
-      if (mat[i][8] < 0) mat[i][8] = -2;
-    }
-    for (let i = SZ - 7; i < SZ; i++) {
-      if (mat[8][i] < 0) mat[8][i] = -2;
-      if (mat[i][8] < 0) mat[i][8] = -2;
-    }
-    mat[SZ - 8][8] = -2;
-
-    // ── Place data bits (zigzag columns) ──
-    let bi = 0;
-    for (let right = SZ - 1; right > 0; right -= 2) {
-      if (right === 6) right = 5;
-      const goUp = (Math.floor((SZ - 1 - right) / 2) % 2 === 0);
-      for (let vert = 0; vert < SZ; vert++) {
-        const row = goUp ? (SZ - 1 - vert) : vert;
-        for (let j = 0; j < 2; j++) {
-          const col = right - j;
-          if (mat[row][col] === -1) {
-            mat[row][col] = bi < bits.length ? bits[bi++] : 0;
-          }
-        }
-      }
-    }
-
-    // ── Apply mask pattern 1: (row % 2 == 0) ──
-    for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++)
-      if (mat[r][c] >= 0 && r % 2 === 0) mat[r][c] ^= 1;
-
-    // ── Format info: ECC M (10), mask 1 (001) ──
-    // Precomputed format string for M+mask1: 101000100100101
-    const fmtBits = '101000100100101'.split('').map(Number);
-    const fc1 = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
-    const fc2 = [[SZ-1,8],[SZ-2,8],[SZ-3,8],[SZ-4,8],[SZ-5,8],[SZ-6,8],[SZ-7,8],[SZ-8,8],
-                 [8,SZ-8],[8,SZ-7],[8,SZ-6],[8,SZ-5],[8,SZ-4],[8,SZ-3],[8,SZ-2]];
-    fmtBits.forEach((v, i) => { set(fc1[i][0], fc1[i][1], v); set(fc2[i][0], fc2[i][1], v); });
-
-    return mat;
-  }
-
-  // ── Draw QR onto a canvas element ──
-  function draw(canvasEl, text, dark = '#2E308E', light = '#ffffff') {
-    let data;
-    try {
-      data = encodeData(text);
-    } catch (e) {
-      const ctx = canvasEl.getContext('2d');
-      ctx.fillStyle = light; ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
-      ctx.fillStyle = dark; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('URL too long', canvasEl.width / 2, canvasEl.height / 2 - 8);
-      ctx.fillText('Copy link above', canvasEl.width / 2, canvasEl.height / 2 + 10);
-      return false;
-    }
-    const mat = buildMatrix(data);
-    const sz  = canvasEl.width;
-    const cell = Math.floor((sz - 16) / SZ);  // 8px quiet zone each side
-    const off  = Math.floor((sz - cell * SZ) / 2);
-    const ctx  = canvasEl.getContext('2d');
-    ctx.fillStyle = light; ctx.fillRect(0, 0, sz, sz);
-    for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++) {
-      ctx.fillStyle = mat[r][c] === 1 ? dark : light;
-      ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
-    }
-    return true;
-  }
-
-  return { draw };
-})();
-
-
 
 function renderQrCode() {
   const url = buildTokenUrl();
   document.getElementById('qrUrl').textContent = url;
   document.getElementById('qrSlotBadge').textContent = '🕐 ' + getSlotName();
 
-  // Ensure we have a canvas (not a replaced div from old code)
-  let canvas = document.getElementById('qrCanvas');
-  if (!canvas || canvas.tagName !== 'CANVAS') {
-    canvas = document.createElement('canvas');
-    canvas.id = 'qrCanvas';
-    canvas.width = 200; canvas.height = 200;
-    canvas.style.cssText = 'border-radius:12px;border:2px solid var(--border2);display:block;';
-    const old = document.getElementById('qrCanvas') || document.getElementById('qrCodeDiv');
-    if (old) old.replaceWith(canvas);
-  }
-  canvas.width = 200; canvas.height = 200;
+  const wrap = document.getElementById('qrWrap');
+  if (!wrap) return;
 
-  const ok = QRGen.draw(canvas, url, '#2E308E', '#ffffff');
-  if (!ok) {
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f0f2f8'; ctx.fillRect(0,0,200,200);
-    ctx.fillStyle = '#2E308E'; ctx.font = '12px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('URL too long', 100, 95);
-    ctx.fillText('Copy link above', 100, 115);
-  }
+  // Use goqr.me API — free, reliable, no auth needed
+  const apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&ecc=M&color=2E308E&bgcolor=ffffff&data=' + encodeURIComponent(url);
+
+  wrap.innerHTML = `
+    <div style="position:relative;display:inline-block;">
+      <img id="qrImg"
+        src="${apiUrl}"
+        width="200" height="200"
+        style="border-radius:12px;border:2px solid var(--border2);display:block;"
+        alt="QR Code"
+        onerror="this.style.display='none';document.getElementById('qrOffline').style.display='flex';"
+      />
+      <div id="qrOffline" style="display:none;width:200px;height:200px;border-radius:12px;
+        border:2px solid var(--border2);background:var(--surface2);
+        flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:16px;">
+        <div style="font-size:28px;">📵</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);line-height:1.6;">
+          No internet connection.<br>Copy the link below and<br>use a QR generator app.
+        </div>
+      </div>
+    </div>`;
 }
+
 
 function copyQrUrl() {
   const url = buildTokenUrl();
@@ -1050,12 +859,16 @@ function copyQrUrl() {
 }
 
 function downloadQr() {
-  const canvas = document.getElementById('qrCanvas');
-  if (!canvas) return;
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL('image/png');
-  a.download = `mystery-seat-qr-${getExpectedToken()}.png`;
-  a.click();
+  const img = document.getElementById('qrImg');
+  if (!img) return;
+  // Open image in new tab for saving (cross-origin img can't be directly downloaded)
+  const w = window.open(img.src, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.target = '_blank';
+    a.click();
+  }
 }
 
 // Countdown timer for QR refresh
