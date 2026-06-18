@@ -180,7 +180,7 @@
 
   /* ── POC LOGIN OVERLAY ── */
   .overlay {
-    display: none; position: fixed; inset: 0; z-index: 200;
+    display: none; position: fixed; inset: 0; z-index: 600;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
     align-items: center; justify-content: center; padding: 16px;
   }
@@ -382,6 +382,9 @@
       <div class="gate-sub">This link has expired or is invalid.<br>Please scan the QR code to get a fresh link.</div>
       <div class="gate-err" id="gateErr"></div>
       <div class="gate-expired" id="gateExpired">⏰ This link was valid for <b id="gateSlot"></b> only.<br>Ask the organiser to scan the updated QR code.</div>
+      <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">
+        <a class="poc-btn" onclick="openLoginOverlay()" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;">🔒 POC Login</a>
+      </div>
     </div>
   </div>
 </div>
