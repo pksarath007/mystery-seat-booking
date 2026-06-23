@@ -1,105 +1,81 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mystery Seat — Redirecting…</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: #f0f2f8;
-    background-image: radial-gradient(ellipse at 20% 10%, rgba(47,120,196,0.12) 0%, transparent 55%),
-                      radial-gradient(ellipse at 80% 80%, rgba(46,48,142,0.10) 0%, transparent 55%);
-    min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    color: #1a1a2e;
-  }
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap');
-  .box {
-    background: #fff; border-radius: 24px; padding: 48px 40px;
-    text-align: center; max-width: 380px; width: 100%;
-    border: 1px solid rgba(46,48,142,0.12);
-    box-shadow: 0 20px 60px rgba(46,48,142,0.12);
-  }
-  .spinner {
-    width: 48px; height: 48px; border-radius: 50%;
-    border: 3px solid rgba(46,48,142,0.15);
-    border-top-color: #2E308E;
-    animation: spin .8s linear infinite;
-    margin: 0 auto 24px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .title {
-    font-family: 'Bebas Neue', cursive;
-    font-size: 28px; letter-spacing: 2px; margin-bottom: 8px;
-  }
-  .title span { background: linear-gradient(135deg, #2E308E, #2F78C4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .sub {
-    font-family: 'DM Mono', monospace; font-size: 11px;
-    color: #8888aa; line-height: 1.7;
-  }
-  .expired {
-    display: none; margin-top: 20px;
-    background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.2);
-    border-radius: 12px; padding: 16px;
-    font-family: 'DM Mono', monospace; font-size: 11px;
-    color: #dc2626; line-height: 1.7;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seat Booking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f0f2f8;
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(47,120,196,.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, rgba(46,48,142,.10) 0%, transparent 55%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      color: #1a1a2e;
+    }
+    .box {
+      background: #fff; border-radius: 24px; width: 100%; max-width: 380px;
+      overflow: hidden; text-align: center;
+      border: 1px solid rgba(46,48,142,.12);
+      box-shadow: 0 20px 60px rgba(46,48,142,.12);
+    }
+    .stripe { height: 5px; background: linear-gradient(135deg, #2E308E, #2F78C4); }
+    .inner  { padding: 40px 28px 36px; }
+    .spinner {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 3px solid rgba(46,48,142,.15);
+      border-top-color: #2E308E;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .title { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 2px; margin-bottom: 8px; }
+    .title span {
+      background: linear-gradient(135deg, #2E308E, #2F78C4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .msg { font-family: 'DM Mono', monospace; font-size: 11px; color: #8888aa; line-height: 1.7; }
+  </style>
 </head>
 <body>
 <div class="box">
-  <div class="spinner"></div>
-  <div class="title">MYSTERY <span>SEAT</span></div>
-  <div class="sub" id="msg">Checking your access…</div>
-  <div class="expired" id="expiredBox">
-    ⏰ This session's link has expired.<br>
-    Please ask the organiser to refresh the QR code.
+  <div class="stripe"></div>
+  <div class="inner">
+    <div class="spinner" id="spinner"></div>
+    <div class="title">Seat <span>Booking</span></div>
+    <div class="msg" id="msg">Checking your access…</div>
   </div>
 </div>
 
 <script>
-  // ─────────────────────────────────────────────
-  // UPDATE THIS LINE EACH SESSION
-  // Format: TOKEN_SECRET-YYYYMMDD-AM  or  TOKEN_SECRET-YYYYMMDD-PM
-  // AM  = midnight to 1:59 PM
-  // PM  = 2:00 PM to midnight
-  // ─────────────────────────────────────────────
-  const CURRENT_TOKEN = 'msb2026-20260618-AM';
-  // ─────────────────────────────────────────────
+  // ── TOKEN SECRET ────────────────────────────────────────────
+  // Must match VITE_TOKEN_SECRET in your .env file
+  const TOKEN_SECRET = 'msb2026'
+  // ───────────────────────────────────────────────────────────
+  // No manual updates needed — token is calculated automatically
+  // from today's date and time (AM before 2PM, PM after 2PM)
+  // ───────────────────────────────────────────────────────────
 
-  const APP_URL = 'index.html'; // path to your main app file
-
-  function redirect() {
-    const url = `${APP_URL}?t=${encodeURIComponent(CURRENT_TOKEN)}`;
-    document.getElementById('msg').textContent = 'Access granted — loading…';
-    setTimeout(() => { window.location.replace(url); }, 600);
+  function getToken() {
+    const now  = new Date()
+    const y    = now.getFullYear()
+    const m    = String(now.getMonth() + 1).padStart(2, '0')
+    const d    = String(now.getDate()).padStart(2, '0')
+    const slot = now.getHours() < 14 ? 'AM' : 'PM'
+    return `${TOKEN_SECRET}-${y}${m}${d}-${slot}`
   }
 
-  function showExpired() {
-    document.querySelector('.spinner').style.display = 'none';
-    document.getElementById('msg').textContent = 'This QR code session has ended.';
-    document.getElementById('expiredBox').style.display = 'block';
-  }
+  // Redirect to the React app with the current valid token
+  const base  = window.location.href.replace(/\/go\.html.*$/, '')
+  const token = getToken()
+  const dest  = `${base}/index.html?t=${encodeURIComponent(token)}`
 
-  // Optional: validate token is still current before redirecting
-  // so expired go.html files show a friendly message instead of the gate error
-  const TOKEN_SECRET = 'msb2026'; // must match index.html
-  function getExpectedToken() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    const slot = now.getHours() < 14 ? 'AM' : 'PM';
-    return `${TOKEN_SECRET}-${y}${m}${d}-${slot}`;
-  }
-
-  if (CURRENT_TOKEN === getExpectedToken()) {
-    redirect();
-  } else {
-    showExpired();
-  }
+  document.getElementById('msg').textContent = 'Access confirmed — loading…'
+  setTimeout(() => { window.location.replace(dest) }, 500)
 </script>
 </body>
 </html>
