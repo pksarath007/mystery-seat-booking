@@ -6,39 +6,17 @@
   <title>Seat Booking</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: #f0f2f8;
-      background-image:
-        radial-gradient(ellipse at 20% 10%, rgba(47,120,196,.12) 0%, transparent 55%),
-        radial-gradient(ellipse at 80% 80%, rgba(46,48,142,.10) 0%, transparent 55%);
-      min-height: 100vh;
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-      color: #1a1a2e;
-    }
-    .box {
-      background: #fff; border-radius: 24px; width: 100%; max-width: 380px;
-      overflow: hidden; text-align: center;
-      border: 1px solid rgba(46,48,142,.12);
-      box-shadow: 0 20px 60px rgba(46,48,142,.12);
-    }
-    .stripe { height: 5px; background: linear-gradient(135deg, #2E308E, #2F78C4); }
-    .inner  { padding: 40px 28px 36px; }
-    .spinner {
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 3px solid rgba(46,48,142,.15);
-      border-top-color: #2E308E;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 24px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .title { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 2px; margin-bottom: 8px; }
-    .title span {
-      background: linear-gradient(135deg, #2E308E, #2F78C4);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .msg { font-family: 'DM Mono', monospace; font-size: 11px; color: #8888aa; line-height: 1.7; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:#f0f2f8;background-image:radial-gradient(ellipse at 20% 10%,rgba(47,120,196,.12) 0%,transparent 55%),radial-gradient(ellipse at 80% 80%,rgba(46,48,142,.10) 0%,transparent 55%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:#1a1a2e}
+    .box{background:#fff;border-radius:24px;width:100%;max-width:380px;overflow:hidden;text-align:center;border:1px solid rgba(46,48,142,.12);box-shadow:0 20px 60px rgba(46,48,142,.12)}
+    .stripe{height:5px;background:linear-gradient(135deg,#2E308E,#2F78C4)}
+    .inner{padding:40px 28px 36px}
+    .spinner{width:44px;height:44px;border-radius:50%;border:3px solid rgba(46,48,142,.15);border-top-color:#2E308E;animation:spin .8s linear infinite;margin:0 auto 24px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .title{font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:2px;margin-bottom:4px}
+    .loc{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;letter-spacing:1px;margin-bottom:12px;background:linear-gradient(135deg,#2E308E,#2F78C4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .msg{font-family:'DM Mono',monospace;font-size:11px;color:#8888aa;line-height:1.7}
+    .expired{display:none;margin-top:20px;background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:12px;padding:16px;font-family:'DM Mono',monospace;font-size:11px;color:#dc2626;line-height:1.8}
   </style>
 </head>
 <body>
@@ -46,36 +24,46 @@
   <div class="stripe"></div>
   <div class="inner">
     <div class="spinner" id="spinner"></div>
-    <div class="title">Seat <span>Booking</span></div>
+    <div class="title">Seat Booking</div>
+    <div class="loc" id="locLabel"></div>
     <div class="msg" id="msg">Checking your access…</div>
+    <div class="expired" id="expiredBox">
+      ⏰ This session has ended.<br>Please ask the organiser to update the QR code.
+    </div>
   </div>
 </div>
-
 <script>
-  // ── TOKEN SECRET ────────────────────────────────────────────
-  // Must match VITE_TOKEN_SECRET in your .env file
+  // Token secret — must match VITE_TOKEN_SECRET in .env
   const TOKEN_SECRET = 'msb2026'
-  // ───────────────────────────────────────────────────────────
-  // No manual updates needed — token is calculated automatically
-  // from today's date and time (AM before 2PM, PM after 2PM)
-  // ───────────────────────────────────────────────────────────
 
-  function getToken() {
+  function getToken(location) {
     const now  = new Date()
     const y    = now.getFullYear()
     const m    = String(now.getMonth() + 1).padStart(2, '0')
     const d    = String(now.getDate()).padStart(2, '0')
     const slot = now.getHours() < 14 ? 'AM' : 'PM'
-    return `${TOKEN_SECRET}-${y}${m}${d}-${slot}`
+    return `${TOKEN_SECRET}-${y}${m}${d}-${slot}-${location}`
   }
 
-  // Redirect to the React app with the current valid token
-  const base  = window.location.href.replace(/\/go\.html.*$/, '')
-  const token = getToken()
-  const dest  = `${base}/index.html?t=${encodeURIComponent(token)}`
+  // Read ?loc=Neon or ?loc=MBP from URL
+  const params   = new URLSearchParams(window.location.search)
+  const location = params.get('loc') // 'Neon' or 'MBP'
 
-  document.getElementById('msg').textContent = 'Access confirmed — loading…'
-  setTimeout(() => { window.location.replace(dest) }, 500)
+  if (!location || !['Neon','MBP'].includes(location)) {
+    document.getElementById('spinner').style.display = 'none'
+    document.getElementById('msg').textContent = 'Invalid QR code. Please scan the correct QR.'
+    document.getElementById('expiredBox').style.display = 'block'
+    document.getElementById('expiredBox').textContent = '❌ No location specified in this QR code.'
+  } else {
+    document.getElementById('locLabel').textContent =
+      (location === 'Neon' ? '🌟 ' : '🏢 ') + location
+    const token = getToken(location)
+    const base  = window.location.href.replace(/\/go\.html.*$/, '')
+    document.getElementById('msg').textContent = 'Access confirmed — loading…'
+    setTimeout(() => {
+      window.location.replace(`${base}/index.html?t=${encodeURIComponent(token)}`)
+    }, 500)
+  }
 </script>
 </body>
 </html>
