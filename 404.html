@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // GitHub Pages 404 redirect hack — redirects to index.html preserving the path
+    const path = window.location.pathname
+    const search = window.location.search
+    const hash = window.location.hash
+    window.location.replace(
+      window.location.origin + window.location.pathname.split('/')[1] + 
+      '/?p=' + encodeURIComponent(path + search + hash)
+    )
+  </script>
+</head>
+<body></body>
+</html>
