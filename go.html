@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,7 +19,6 @@
     .pick{display:none;margin-top:20px;gap:12px;flex-direction:column}
     .pickBtn{padding:12px 20px;border:none;border-radius:12px;background:linear-gradient(135deg,#2E308E,#2F78C4);color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:1px}
     .pickBtn:hover{opacity:.9}
-    .debug{margin-top:12px;font-family:'DM Mono',monospace;font-size:9px;color:#ccc;word-break:break-all}
   </style>
 </head>
 <body>
@@ -35,42 +33,49 @@
       <button class="pickBtn" onclick="go('Neon')">🌟 Neon</button>
       <button class="pickBtn" onclick="go('MBP')">🏢 MBP</button>
     </div>
-    <div class="debug" id="debug"></div>
   </div>
 </div>
 
 <script>
-  const TOKEN_SECRET = 'msb2026'
+  var TOKEN_SECRET = 'msb2026'
 
   function getToken(loc) {
-    const now  = new Date()
-    const y    = now.getFullYear()
-    const m    = String(now.getMonth() + 1).padStart(2, '0')
-    const d    = String(now.getDate()).padStart(2, '0')
-    const slot = now.getHours() < 14 ? 'AM' : 'PM'
+    var now  = new Date()
+    var y    = now.getFullYear()
+    var m    = String(now.getMonth() + 1).padStart(2, '0')
+    var d    = String(now.getDate()).padStart(2, '0')
+    var slot = now.getHours() < 14 ? 'AM' : 'PM'
     return TOKEN_SECRET + '-' + y + m + d + '-' + slot + '-' + loc
   }
 
   function go(loc) {
     var token = getToken(loc)
+    var t     = encodeURIComponent(token)
 
-    // Build the app URL — same origin, same path prefix, just index.html
-    // e.g. https://pksarath007.github.io/mystery-seat-booking/go.html
-    //   → https://pksarath007.github.io/mystery-seat-booking/index.html?t=...
-    var currentPath = window.location.pathname  // /mystery-seat-booking/go.html
-    var basePath    = currentPath.replace('go.html', '')  // /mystery-seat-booking/
-    var dest        = window.location.origin + basePath + 'index.html?t=' + encodeURIComponent(token)
+    // Detect environment and build correct URL
+    var origin   = window.location.origin        // https://pksarath007.github.io
+    var pathname = window.location.pathname      // /mystery-seat-booking/go.html
+    var repoPath = pathname.replace(/\/go\.html.*/, '') // /mystery-seat-booking
 
-    document.getElementById('debug').textContent = '→ ' + dest
-    document.getElementById('msg').textContent = 'Redirecting to ' + loc + '…'
-    document.getElementById('spinner').style.display = 'block'
+    var dest
+
+    if (origin.indexOf('localhost') !== -1 || origin.indexOf('127.0.0.1') !== -1) {
+      // Local Vite dev server — use root path
+      dest = origin + repoPath.replace(/\/[^/]*$/, '') + '/?t=' + t
+      // If repoPath is just '' or '/', go to root
+      if (!repoPath || repoPath === '/') dest = origin + '/?t=' + t
+    } else {
+      // GitHub Pages or any static host — use root of repo folder
+      dest = origin + repoPath + '/?t=' + t
+    }
+
+    document.getElementById('msg').textContent = 'Loading ' + loc + ' booking…'
 
     setTimeout(function() {
       window.location.replace(dest)
     }, 300)
   }
 
-  // Read ?loc= param
   var params = new URLSearchParams(window.location.search)
   var loc    = params.get('loc')
 
@@ -79,7 +84,6 @@
     document.getElementById('msg').textContent = 'Access confirmed — loading…'
     go(loc)
   } else {
-    // No loc param — show manual picker
     document.getElementById('spinner').style.display = 'none'
     document.getElementById('msg').textContent = 'Select your venue:'
     document.getElementById('pick').style.display = 'flex'
