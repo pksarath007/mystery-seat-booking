@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DefectScope AI — Defect Investigation Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+<style>
+:root{
+  --bg:#0A1224; --bg-2:#0C1730; --card:#111B34; --card-2:#0F1A32;
+  --line:rgba(148,163,184,.14); --line-strong:rgba(148,163,184,.28);
+  --blue:#4D9DFF; --teal:#2DD4BF;
+  --red:#D92D20; --orange:#F79009; --yellow:#FEC84B; --green:#12B76A; --grey:#64748B;
+  --text:#F4F7FF; --muted:#98A2B3; --muted-2:#6B7893;
+  --glow-red:rgba(217,45,32,.35); --glow-blue:rgba(77,157,255,.28);
+  --r:16px; --r-sm:10px;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.45;overflow-x:hidden;
+  background-image:radial-gradient(900px 500px at 82% -8%,rgba(77,157,255,.10),transparent 60%),radial-gradient(700px 500px at 8% 108%,rgba(45,212,191,.07),transparent 60%);}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(148,163,184,.22);border-radius:20px}::-webkit-scrollbar-track{background:transparent}
+h1,h2,h3,h4,.disp{font-family:var(--disp)}
+
+.app{display:grid;grid-template-columns:250px 1fr;grid-template-rows:64px 1fr;min-height:100vh;grid-template-areas:"side head" "side main"}
+.sidebar{grid-area:side;border-right:1px solid var(--line);background:linear-gradient(180deg,#0B1428,#0A1122);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.topbar{grid-area:head;border-bottom:1px solid var(--line);background:rgba(10,18,36,.72);backdrop-filter:blur(14px);position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;padding:0 26px}
+.main{grid-area:main;padding:26px 30px 90px;max-width:1560px}
+
+.brand{display:flex;align-items:center;gap:11px;padding:20px 20px 16px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--teal));display:grid;place-items:center;box-shadow:0 0 22px var(--glow-blue);flex:none}
+.brand .logo svg{width:19px;height:19px}
+.brand b{font-size:16px;font-weight:700;letter-spacing:.2px}
+.brand span{display:block;font-size:10px;color:var(--muted-2);font-weight:600;letter-spacing:.4px;text-transform:uppercase;margin-top:1px}
+
+.nav{padding:6px 12px;display:flex;flex-direction:column;gap:2px}
+.nav .grp{font-size:10px;font-weight:700;color:var(--muted-2);letter-spacing:1.2px;text-transform:uppercase;padding:14px 12px 6px}
+.nav a{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--r-sm);color:var(--muted);font-size:13px;font-weight:500;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:.16s}
+.nav a svg{width:17px;height:17px;flex:none;stroke:currentColor}
+.nav a:hover{background:rgba(77,157,255,.08);color:var(--text)}
+.nav a.active{background:linear-gradient(90deg,rgba(77,157,255,.18),rgba(77,157,255,.04));color:#fff;border-color:rgba(77,157,255,.28)}
+.nav a.active svg{stroke:var(--blue)}
+.nav a .badge{margin-left:auto;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:rgba(217,45,32,.18);color:#ffb4ad;font-family:var(--mono)}
+.side-case{margin:auto 14px 16px;padding:13px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card-2)}
+.side-case .row{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px}
+.side-case .row:last-child{margin-bottom:0}
+.side-case .k{color:var(--muted-2)} .side-case .v{color:var(--text);font-weight:600;font-family:var(--mono)}
+
+.tb-title{font-size:14px;font-weight:700}
+.tb-title small{display:block;font-size:11px;color:var(--muted-2);font-weight:500;font-family:var(--sans)}
+.tb-spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;font-size:11.5px;font-weight:700;border:1px solid transparent;font-family:var(--mono);letter-spacing:.2px}
+.chip.crit{background:rgba(217,45,32,.14);color:#ff9a90;border-color:rgba(217,45,32,.4)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 9px var(--red);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tb-conf{display:flex;align-items:center;gap:9px}
+.tb-conf .lbl{font-size:11px;color:var(--muted-2);text-align:right;line-height:1.25}
+.tb-conf .lbl b{color:var(--text);font-size:13px;font-family:var(--mono)}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--card-2);display:grid;place-items:center;cursor:pointer;color:var(--muted);position:relative;transition:.15s}
+.icon-btn:hover{color:var(--text);border-color:var(--line-strong)}
+.icon-btn svg{width:17px;height:17px}
+.icon-btn .n{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:700;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono)}
+.avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#334a72,#22314f);display:grid;place-items:center;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--line-strong)}
+
+.view{display:none;animation:fade .35s ease} .view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+.page-head h1{font-size:23px;font-weight:700;letter-spacing:-.4px}
+.page-head p{color:var(--muted);font-size:13px;margin-top:3px;max-width:660px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--blue);margin-bottom:7px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,0)),var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;position:relative}
+.card h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.card .sub{font-size:11.5px;color:var(--muted-2);margin-bottom:15px}
+.grid{display:grid;gap:18px}
+.g-6{grid-template-columns:repeat(6,1fr)} .g-4{grid-template-columns:repeat(4,1fr)} .g-3{grid-template-columns:repeat(3,1fr)}
+.g-2{grid-template-columns:1fr 1fr} .g-2-1{grid-template-columns:1.7fr 1fr} .g-1-2{grid-template-columns:1fr 1.7fr}
+.section-gap{margin-top:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.16s;font-family:var(--sans)}
+.btn svg{width:15px;height:15px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),#3a86f0);color:#fff;box-shadow:0 6px 18px rgba(77,157,255,.28)}
+.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-ghost{background:var(--card-2);border-color:var(--line-strong);color:var(--text)} .btn-ghost:hover{border-color:var(--blue);color:#fff}
+.btn-danger{background:linear-gradient(135deg,var(--red),#b8241a);color:#fff;box-shadow:0 6px 18px var(--glow-red)}
+
+.rc{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;font-family:var(--mono);letter-spacing:.2px}
+.rc::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.rc.confirmed{color:#ff9a90;background:rgba(217,45,32,.15)} .rc.probable{color:#ffc078;background:rgba(247,144,9,.15)}
+.rc.review{color:#ffe3a3;background:rgba(254,200,75,.14)} .rc.cleared{color:#7ee6b0;background:rgba(18,183,106,.15)}
+.rc.grey{color:#b6c0d4;background:rgba(100,116,139,.18)}
+.rc.critical{color:#ff9a90;background:rgba(217,45,32,.15)} .rc.high{color:#ffc078;background:rgba(247,144,9,.15)}
+.rc.medium{color:#ffe3a3;background:rgba(254,200,75,.14)} .rc.low{color:#7ee6b0;background:rgba(18,183,106,.15)}
+
+/* KPI */
+.kpi{padding:18px}
+.kpi .lab{font-size:11px;color:var(--muted-2);font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:7px}
+.kpi .lab .sw{width:9px;height:9px;border-radius:3px}
+.kpi .num{font-size:30px;font-weight:800;font-family:var(--mono);margin-top:8px;letter-spacing:-1px;line-height:1}
+.kpi .foot{font-size:11px;color:var(--muted);margin-top:8px}
+.kpi .foot .up{color:var(--red);font-weight:700} .kpi .foot .dn{color:var(--green);font-weight:700}
+
+/* ===== Executive overview ===== */
+.portfolio{display:flex;flex-direction:column;gap:12px}
+.pcase{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--card-2);transition:.16s;cursor:pointer}
+.pcase:hover{border-color:var(--line-strong);transform:translateY(-2px)}
+.pcase.priority{border-color:rgba(217,45,32,.45);background:linear-gradient(100deg,rgba(217,45,32,.08),transparent 55%),var(--card-2);box-shadow:0 0 0 1px rgba(217,45,32,.08)}
+.pcase .sev{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;flex:none}
+.pcase .sev svg{width:22px;height:22px}
+.pcase .pmid .cid{font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;gap:9px}
+.pcase .pmid .cdesc{font-size:12px;color:var(--muted);margin-top:3px}
+.pcase .pmid .prog{height:5px;border-radius:20px;background:rgba(148,163,184,.14);overflow:hidden;margin-top:9px;max-width:340px}
+.pcase .pmid .prog i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--blue),var(--teal))}
+.pcase .pend{text-align:right}
+.pcase .pend .risk{font-family:var(--mono);font-size:20px;font-weight:700}
+.pcase .pend .st{font-size:11px;color:var(--muted-2);margin-top:3px}
+.pcase .pend .open{font-size:11.5px;font-weight:700;color:var(--blue);margin-top:6px}
+
+.feed{display:flex;flex-direction:column}
+.fitem{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.fitem:last-child{border:none}
+.fitem .fd{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none}
+.fitem .fd svg{width:15px;height:15px}
+.fitem .ft{font-size:12.5px;font-weight:500}
+.fitem .ft small{display:block;color:var(--muted-2);font-family:var(--mono);font-size:10.5px;margin-top:2px}
+.insight{display:flex;gap:11px;padding:13px;border:1px solid rgba(45,212,191,.28);border-radius:12px;background:rgba(45,212,191,.05);margin-bottom:10px}
+.insight:last-child{margin-bottom:0}
+.insight .ii{width:30px;height:30px;border-radius:8px;background:rgba(45,212,191,.14);display:grid;place-items:center;flex:none}
+.insight .ii svg{width:16px;height:16px;stroke:var(--teal)}
+.insight .it{font-size:12.5px;line-height:1.5}.insight .it b{color:#7fe6d5}
+
+/* ===== Workflow tracker ===== */
+.tracker{border:1px solid var(--line);border-radius:var(--r);padding:20px;background:var(--card)}
+.tracker .th{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.tracker .th .now{font-size:12.5px;color:var(--muted)}
+.tracker .th .now b{color:#fff;font-family:var(--mono)}
+.stages{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding-bottom:6px}
+.stage{display:flex;flex-direction:column;align-items:center;min-width:112px;flex:1;position:relative;text-align:center}
+.stage .sd{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:12px;z-index:2}
+.stage .sl{font-size:10.5px;margin-top:9px;color:var(--muted);font-weight:500;line-height:1.3;max-width:96px}
+.stage::before{content:"";position:absolute;top:15px;left:-50%;width:100%;height:2px;background:var(--line)}
+.stage:first-child::before{display:none}
+.stage.done .sd{background:var(--green);color:#04240f} .stage.done .sl{color:#7ee6b0}
+.stage.done::before{background:var(--green)}
+.stage.now .sd{background:var(--blue);color:#fff;box-shadow:0 0 0 5px rgba(77,157,255,.22);animation:pulseBlue 1.8s infinite} .stage.now .sl{color:#fff;font-weight:700}
+.stage.now::before{background:linear-gradient(90deg,var(--green),var(--blue))}
+@keyframes pulseBlue{0%,100%{box-shadow:0 0 0 5px rgba(77,157,255,.22)}50%{box-shadow:0 0 0 9px rgba(77,157,255,.06)}}
+.stage.wait .sd{background:var(--card-2);border:1px solid var(--line-strong);color:var(--muted-2)}
+.tracker .metrics{display:flex;gap:26px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.tracker .metrics .m .mv{font-family:var(--mono);font-size:18px;font-weight:700}
+.tracker .metrics .m .ml{font-size:10.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* alert / genealogy / donut reused */
+.alert{grid-column:1/-1;border:1px solid rgba(217,45,32,.4);border-radius:var(--r);position:relative;overflow:hidden;background:linear-gradient(105deg,rgba(217,45,32,.14),rgba(17,27,52,.6) 55%),var(--card);box-shadow:0 0 0 1px rgba(217,45,32,.08),0 22px 48px -26px var(--glow-red);display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;padding:22px 24px}
+.alert::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 200px at 12% 0%,var(--glow-red),transparent 70%);pointer-events:none}
+.alert .ico{width:56px;height:56px;border-radius:14px;background:rgba(217,45,32,.16);display:grid;place-items:center;border:1px solid rgba(217,45,32,.42);position:relative;z-index:1}
+.alert .ico svg{width:28px;height:28px;stroke:#ff8a7e}
+.alert .body{position:relative;z-index:1}
+.alert .body .top{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.alert .body h2{font-size:18px;font-weight:700}
+.alert .body .meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:9px;font-size:12.5px;color:var(--muted)}
+.alert .body .meta b{color:var(--text);font-family:var(--mono);font-weight:600}
+.alert .cta{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px}
+.donut-wrap{display:flex;align-items:center;gap:22px}
+.legend{display:flex;flex-direction:column;gap:9px;flex:1}
+.legend .li{display:flex;align-items:center;gap:9px;font-size:12.5px}
+.legend .li .sw{width:11px;height:11px;border-radius:3px;flex:none}
+.legend .li .nm{color:var(--muted)} .legend .li .vl{margin-left:auto;font-weight:700;font-family:var(--mono)}
+.geno{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 2px 12px}
+.geno .node{min-width:150px;flex:1;background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:13px;position:relative;cursor:pointer;transition:.16s}
+.geno .node:hover{border-color:var(--blue);transform:translateY(-2px)}
+.geno .node .ic{width:30px;height:30px;border-radius:8px;background:rgba(77,157,255,.12);display:grid;place-items:center;margin-bottom:9px}
+.geno .node .ic svg{width:16px;height:16px;stroke:var(--blue)}
+.geno .node .stg{font-size:10px;color:var(--muted-2);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.geno .node .id{font-size:14px;font-weight:700;font-family:var(--mono);margin:2px 0 8px} .geno .node .cnt{font-size:11px;color:var(--muted)}
+.geno .arrow{display:flex;align-items:center;color:var(--muted-2);padding:0 6px;flex:none} .geno .arrow svg{width:18px;height:18px}
+.node.risk-red{border-color:rgba(217,45,32,.45)} .node.risk-red .ic{background:rgba(217,45,32,.14)} .node.risk-red .ic svg{stroke:#ff8a7e}
+.node.risk-orange .ic{background:rgba(247,144,9,.14)} .node.risk-orange .ic svg{stroke:#ffb95e}
+
+/* twin */
+.twin{display:grid;grid-template-columns:1fr 300px;gap:18px}
+.twin-wrap{position:relative;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#070c18;min-height:440px}
+#packTwin{width:100%;height:440px;display:block;cursor:grab} #packTwin:active{cursor:grabbing}
+.twin-legend{position:absolute;top:14px;left:16px;display:flex;gap:14px;flex-wrap:wrap}
+.twin-legend .li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.twin-legend .sw{width:10px;height:10px;border-radius:50%}
+.twin-hint{position:absolute;bottom:14px;left:16px;font-size:10.5px;color:var(--muted-2);font-family:var(--mono)}
+.twin-badge{position:absolute;top:14px;right:16px}
+.twin-tip{position:absolute;pointer-events:none;background:#0b1428;border:1px solid var(--line-strong);border-radius:7px;padding:8px 11px;font-size:11px;opacity:0;transition:opacity .1s;transform:translate(-50%,-120%);z-index:5;white-space:nowrap}
+.twin-tip .n{font-weight:700;font-size:12.5px;font-family:var(--mono)} .twin-tip .s{color:var(--muted-2);font-size:10.5px;margin-top:2px}
+.twin-fallback{position:absolute;inset:0;display:none;place-items:center;text-align:center;color:var(--muted-2);font-size:12.5px;padding:30px}
+.drawer h4{font-size:11px;color:var(--muted-2);letter-spacing:.8px;text-transform:uppercase;font-weight:700;margin-bottom:12px}
+.drawer .empty{color:var(--muted-2);font-size:12.5px;text-align:center;padding:40px 10px}
+.dr-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.dr-row .k{color:var(--muted-2)} .dr-row .v{font-weight:600;font-family:var(--mono);text-align:right}
+.adobe-tag{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:20px;background:linear-gradient(135deg,rgba(250,0,0,.14),rgba(255,60,60,.06));border:1px solid rgba(255,90,90,.3);color:#ff8f8f}
+.adobe-tag::before{content:"";width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#fa0f00,#ff5c33)}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-size:10.5px;font-weight:700;color:var(--muted-2);letter-spacing:.6px;text-transform:uppercase;padding:10px 12px;border-bottom:1px solid var(--line-strong);white-space:nowrap}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;white-space:nowrap}
+.tbl tr:hover td{background:rgba(77,157,255,.05)} .tbl .cust{font-family:var(--sans);font-weight:600}
+
+/* confidence bars */
+.src{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)} .src:last-child{border:none}
+.src .nm{width:150px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px} .src .nm .di{width:8px;height:8px;border-radius:50%}
+.src .track{flex:1;height:8px;border-radius:20px;background:rgba(148,163,184,.14);overflow:hidden} .src .fill{height:100%;border-radius:20px}
+.src .pct{width:44px;text-align:right;font-family:var(--mono);font-weight:700;font-size:12.5px} .src .st{width:78px;text-align:right}
+.st-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--mono)}
+.st-verified{background:rgba(18,183,106,.16);color:#7ee6b0} .st-strong{background:rgba(77,157,255,.16);color:#9cc7ff}
+.st-partial{background:rgba(254,200,75,.16);color:#ffe3a3} .st-missing{background:rgba(217,45,32,.16);color:#ff9a90}
+.gaps{margin-top:16px;background:var(--card-2);border:1px dashed rgba(254,200,75,.35);border-radius:12px;padding:14px}
+.gaps .gh{font-size:12px;font-weight:700;color:#ffe3a3;display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.gaps .gi{font-size:12px;color:var(--muted);padding:4px 0;display:flex;gap:8px;align-items:flex-start}
+.gaps .gi::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--yellow);margin-top:6px;flex:none}
+
+/* evidence explorer */
+.ev-card{border:1px solid var(--line);border-radius:12px;margin-bottom:11px;overflow:hidden;background:var(--card-2)}
+.ev-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer}
+.ev-head .l{display:flex;align-items:center;gap:12px}
+.ev-fi{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;flex:none;font-family:var(--mono);font-size:9px;font-weight:700}
+.ev-fi.pdf{background:rgba(217,45,32,.14);color:#ff9a90} .ev-fi.xls{background:rgba(18,183,106,.14);color:#7ee6b0} .ev-fi.csv{background:rgba(77,157,255,.14);color:#9cc7ff}
+.ev-title{font-size:13px;font-weight:600} .ev-title small{display:block;color:var(--muted-2);font-family:var(--mono);font-size:10.5px;margin-top:2px}
+.ev-right{display:flex;align-items:center;gap:12px}
+.ev-imp{font-family:var(--mono);font-size:12px;font-weight:700;color:#7ee6b0}
+.ev-chevron{transition:transform .18s;color:var(--muted-2)} .ev-card.open .ev-chevron{transform:rotate(180deg)}
+.ev-body{max-height:0;overflow:hidden;transition:max-height .22s ease,padding .22s ease;padding:0 16px}
+.ev-card.open .ev-body{max-height:260px;padding:0 16px 16px}
+.ev-finding{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--yellow);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.ev-finding .fl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#ffe3a3;font-weight:700;margin-bottom:5px}
+.ev-finding .ft{font-size:12.5px;color:#dbe6ff;font-style:italic}
+.ev-thumbs{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
+.ev-thumb{width:88px;height:62px;border-radius:8px;position:relative;overflow:hidden;border:1px solid var(--line-strong);display:grid;place-items:end;padding:6px}
+.ev-thumb span{font-size:9px;color:#fff;font-family:var(--mono);position:relative;z-index:1;text-shadow:0 1px 3px #000}
+.ev-corr .src .nm{width:170px}
+
+/* copilot workspace */
+.copilot{display:grid;grid-template-columns:1fr 360px;gap:18px}
+.chat{display:flex;flex-direction:column;height:520px}
+.chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-right:6px}
+.msg{max-width:88%;padding:12px 15px;border-radius:12px;font-size:12.5px;line-height:1.6}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--blue),#3a86f0);color:#fff;border-bottom-right-radius:3px}
+.msg.ai{align-self:flex-start;background:var(--card-2);border:1px solid var(--line);border-bottom-left-radius:3px}
+.msg.ai .aitag{font-size:9.5px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.msg ul{margin:8px 0 0;padding-left:16px} .msg li{margin-bottom:4px}
+.msg .cite{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
+.msg .cite span{font-size:10px;font-family:var(--mono);background:rgba(77,157,255,.12);color:#9cc7ff;padding:2px 8px;border-radius:20px}
+.prompt-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pchip{font-size:11px;background:var(--card-2);border:1px solid var(--line);color:var(--muted);padding:7px 12px;border-radius:20px;cursor:pointer;transition:.14s}
+.pchip:hover{border-color:var(--blue);color:#fff}
+.chat-input{display:flex;gap:9px;margin-top:12px}
+.chat-input input{flex:1;background:var(--card-2);border:1px solid var(--line-strong);border-radius:10px;padding:11px 14px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none}
+.chat-input input:focus{border-color:var(--blue)}
+.chat-input button{width:42px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),#3a86f0);color:#fff;cursor:pointer;display:grid;place-items:center}
+.chat-input button svg{width:17px;height:17px}
+.act-tier{margin-bottom:16px} .act-tier:last-child{margin-bottom:0}
+.act-tier .tl{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.act-tier .tl .d{width:8px;height:8px;border-radius:50%}
+.action{border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:9px;background:var(--card-2)}
+.action .an{font-size:13px;font-weight:600;margin-bottom:8px}
+.action .am{display:flex;gap:8px;flex-wrap:wrap}
+.action .am .mm{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:6px;background:var(--card);border:1px solid var(--line);color:var(--muted)}
+.action .am .mm b{color:#fff}
+
+/* communication guided */
+.commsteps{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.cstep{flex:1;min-width:150px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--card-2);position:relative;transition:.16s}
+.cstep.on{border-color:var(--blue);background:linear-gradient(180deg,rgba(77,157,255,.08),transparent),var(--card-2)}
+.cstep .cn{font-family:var(--mono);font-size:11px;color:var(--blue);font-weight:700}
+.cstep .ct{font-size:13px;font-weight:600;margin-top:5px} .cstep .cs{font-size:11px;color:var(--muted-2);margin-top:2px}
+.opt-grid{display:flex;gap:9px;flex-wrap:wrap}
+.opt{padding:9px 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--card-2);font-size:12.5px;font-weight:600;cursor:pointer;transition:.14s}
+.opt:hover{border-color:var(--blue)} .opt.sel{background:rgba(77,157,255,.14);border-color:var(--blue);color:#fff}
+.draft{background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;font-size:12.5px;line-height:1.7;color:#dbe6ff;white-space:pre-line}
+.draft .dh{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);font-family:var(--mono);margin-bottom:9px;display:flex;align-items:center;gap:7px}
+
+/* generic timeline / flow / prog reused */
+.flow{display:flex;flex-direction:column;gap:0}
+.step{display:flex;gap:14px;position:relative;padding-bottom:20px}.step:last-child{padding-bottom:0}
+.step::before{content:"";position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--line)}.step:last-child::before{display:none}
+.step .sd{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;z-index:1;font-size:12px;font-weight:700;font-family:var(--mono)}
+.step.done .sd{background:var(--green);color:#04240f} .step.now .sd{background:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(77,157,255,.2)}
+.step.wait .sd{background:var(--card-2);border:1px solid var(--line-strong);color:var(--muted-2)}
+.step .sc{flex:1;padding-top:5px} .step .sc .t{font-size:13.5px;font-weight:600} .step .sc .m{font-size:11.5px;color:var(--muted-2);margin-top:1px}
+.stamp{font-size:11px;color:var(--muted-2);font-family:var(--mono)}
+.prog{padding:14px 0;border-bottom:1px solid var(--line)}.prog:last-child{border:none}
+.prog .ph{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px}.prog .ph .k{font-weight:600}.prog .ph .v{font-family:var(--mono);color:var(--muted)}
+.prog .pt{height:8px;border-radius:20px;background:rgba(148,163,184,.14);overflow:hidden}.prog .pf{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--blue),var(--teal))}
+.action-list{display:flex;flex-direction:column;gap:9px;margin:4px 0 6px}
+.action-list .ai{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card-2)}
+.action-list .ai .n{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:12px;flex:none}
+.action-list .ai .txt{flex:1;font-size:13px;font-weight:600} .action-list .ai .txt small{display:block;font-weight:400;color:var(--muted-2);font-size:11px;margin-top:1px}
+
+/* risk matrix + scenario */
+.matrix{display:grid;grid-template-columns:auto repeat(3,1fr);gap:6px;font-size:11px}
+.matrix .mh{font-family:var(--mono);font-size:10px;color:var(--muted-2);display:grid;place-items:center;padding:6px}
+.mcell{border-radius:8px;padding:14px 8px;text-align:center;font-weight:700;font-family:var(--mono);font-size:11px;border:1px solid var(--line)}
+.scn{border:1px solid var(--line);border-radius:var(--r);padding:18px;background:var(--card);position:relative;transition:.16s;cursor:pointer}
+.scn:hover{border-color:var(--line-strong)}
+.scn.rec{border-color:rgba(18,183,106,.5);background:linear-gradient(180deg,rgba(18,183,106,.06),transparent),var(--card);box-shadow:0 0 0 1px rgba(18,183,106,.15)}
+.scn .tag{position:absolute;top:-11px;left:18px;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--green);color:#04240f;letter-spacing:.4px}
+.scn .snm{font-size:14px;font-weight:700} .scn .sdesc{font-size:11.5px;color:var(--muted-2);margin:2px 0 14px}
+.metric{margin-bottom:12px}.metric .ml{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px}.metric .ml .k{color:var(--muted)}.metric .ml .v{font-family:var(--mono);font-weight:700}
+.metric .mt{height:6px;border-radius:20px;background:rgba(148,163,184,.14);overflow:hidden}.metric .mf{height:100%;border-radius:20px}
+.radius{display:grid;place-items:center;min-height:340px;position:relative}
+.ring{position:absolute;border-radius:50%;border:1px solid var(--line)}
+.blip{position:absolute;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 0 0 4px rgba(255,255,255,.06)}
+.blip:hover{transform:translate(-50%,-50%) scale(1.4)}
+.blip .tip{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:#0b1428;border:1px solid var(--line-strong);padding:6px 9px;border-radius:8px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:.15s;z-index:5}
+.blip:hover .tip{opacity:1}
+.core{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle,rgba(217,45,32,.5),rgba(217,45,32,.05));border:1px solid rgba(217,45,32,.5);display:grid;place-items:center;text-align:center;z-index:2}.core b{font-size:11px;font-family:var(--mono);color:#ff9a90}
+.why{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.why .w{font-size:11.5px;padding:5px 11px;border-radius:20px;background:var(--card-2);border:1px solid var(--line);color:var(--muted);display:flex;align-items:center;gap:6px}
+.why .w svg{width:13px;height:13px;stroke:var(--green)}
+.tpl{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card-2);transition:.16s}.tpl:hover{border-color:var(--blue);transform:translateY(-2px)}
+.tpl .thumb{height:80px;display:grid;place-items:center} .tpl .thumb svg{width:30px;height:30px}
+.tpl .meta{padding:12px 14px} .tpl .meta .tt{font-size:13px;font-weight:700} .tpl .meta .tm{font-size:11px;color:var(--muted-2);margin-top:2px}
+
+/* floating copilot */
+.fab{position:fixed;bottom:26px;right:26px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--teal));display:grid;place-items:center;cursor:pointer;z-index:120;box-shadow:0 12px 30px rgba(77,157,255,.4);border:none;transition:.18s}
+.fab:hover{transform:scale(1.08)} .fab svg{width:26px;height:26px;stroke:#04240f}
+.fab .pexperiment{position:absolute;top:-3px;right:-3px;width:16px;height:16px;background:var(--teal);border-radius:50%;border:2px solid var(--bg)}
+.copanel{position:fixed;bottom:26px;right:26px;width:400px;max-width:calc(100vw - 40px);height:560px;max-height:calc(100vh - 52px);background:var(--card);border:1px solid var(--line-strong);border-radius:18px;z-index:121;display:none;flex-direction:column;overflow:hidden;box-shadow:0 30px 70px -20px rgba(0,0,0,.7)}
+.copanel.open{display:flex;animation:fade .25s}
+.co-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,rgba(77,157,255,.08),transparent)}
+.co-head .cav{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--teal));display:grid;place-items:center;flex:none}
+.co-head .cav svg{width:18px;height:18px;stroke:#04240f}
+.co-head .ci b{font-size:13.5px;font-weight:700}
+.co-head .ci .ctx{font-size:10.5px;color:var(--teal);font-family:var(--mono);margin-top:1px}
+.co-head .close{margin-left:auto;cursor:pointer;color:var(--muted);width:28px;height:28px;display:grid;place-items:center;border-radius:7px}
+.co-head .close:hover{background:var(--card-2);color:#fff}
+.co-body{flex:1;overflow-y:auto;padding:16px}
+.co-foot{padding:12px 14px;border-top:1px solid var(--line)}
+
+@media(max-width:1200px){.g-6{grid-template-columns:repeat(3,1fr)}.g-4{grid-template-columns:repeat(2,1fr)}.g-3{grid-template-columns:1fr}.g-2,.g-2-1,.g-1-2{grid-template-columns:1fr}.twin,.copilot{grid-template-columns:1fr}.alert{grid-template-columns:1fr}}
+@media(max-width:820px){.app{grid-template-columns:1fr;grid-template-areas:"head" "main"}.sidebar{display:none}.g-6,.g-4{grid-template-columns:1fr 1fr}}
+/* ===== V3 · Single Case Hub + Stepper ===== */
+.case-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;
+  padding:22px 24px;border-radius:16px;margin-bottom:16px;
+  background:radial-gradient(600px 240px at 12% 0%,rgba(77,157,255,.14),transparent 60%),linear-gradient(180deg,rgba(217,45,32,.06),transparent),var(--card);
+  border:1px solid var(--line-2)}
+.case-hero h1{font-size:24px;font-weight:800;margin:4px 0 6px;letter-spacing:-.4px}
+.case-hero .mono{font-family:var(--mono);color:#ff9a90}
+.case-hero p{font-size:13.5px;color:var(--muted);max-width:58ch}
+.case-hero .ch-r{display:flex;gap:10px;flex-wrap:wrap}
+.ch-chip{background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:9px 14px;text-align:right;min-width:92px}
+.ch-chip .k{display:block;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted-2)}
+.ch-chip .v{display:block;font-size:16px;font-weight:800;font-family:var(--mono);margin-top:2px}
+
+.stepper{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:10px;margin-bottom:20px;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  position:sticky;top:64px;z-index:20;backdrop-filter:blur(8px);scrollbar-width:thin}
+.stepper::-webkit-scrollbar{height:6px}.stepper::-webkit-scrollbar-thumb{background:rgba(148,163,184,.25);border-radius:10px}
+.cstep{flex:1;min-width:132px;display:flex;align-items:center;gap:10px;background:transparent;border:none;
+  border-radius:10px;padding:9px 11px;cursor:pointer;text-align:left;color:var(--muted);transition:.15s;white-space:nowrap}
+.cstep:hover{background:rgba(77,157,255,.08);color:var(--text)}
+.cstep .cs-dot{width:24px;height:24px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:11px;font-weight:800;font-family:var(--mono);background:var(--card-2);border:1.5px solid var(--line-2);color:var(--muted)}
+.cstep .cs-tx{display:flex;flex-direction:column;line-height:1.15;overflow:hidden}
+.cstep .cs-l{font-size:12.5px;font-weight:700;color:var(--text)}
+.cstep .cs-d{font-size:10.5px;color:var(--muted-2);overflow:hidden;text-overflow:ellipsis}
+.cstep.done .cs-dot{background:rgba(18,183,106,.15);border-color:var(--green);color:#7ee6b0}
+.cstep.now .cs-dot{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(77,157,255,.18)}
+.cstep.active{background:rgba(77,157,255,.12);box-shadow:inset 0 0 0 1px rgba(77,157,255,.35)}
+.cstep.active .cs-l{color:#9cc7ff}
+.cstep-sep{width:14px;flex:none;align-self:center;height:1.5px;background:var(--line-2);margin:0 -2px}
+.stage-body{scroll-margin-top:150px}
+.stage-nav{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
+.stage-nav .stage-count{font-size:12px;font-family:var(--mono);color:var(--muted-2)}
+.stage-nav .btn{white-space:nowrap}
+@media(max-width:720px){.case-hero{padding:18px}.case-hero h1{font-size:20px}.stepper{top:56px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z" stroke="#04240f" stroke-width="1.8"/><path d="m9 12 2 2 4-4" stroke="#04240f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div><b>DefectScope AI</b><span>Investigation Platform</span></div>
+    </div>
+    <nav class="nav">
+      <div class="grp">Portfolio</div>
+      <a class="active" data-view="exec"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"/></svg>Executive Overview</a>
+      <a data-view="cases"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>All Cases<span class="badge">14</span></a>
+      <div class="grp">Active Case</div>
+      <a data-view="case"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Case Overview<span class="badge" style="background:rgba(217,45,32,.2);color:#ff9a90">7821</span></a>
+    </nav>
+    <div class="side-case">
+      <div class="row"><span class="k">Active case</span><span class="v">DF-EV-7821</span></div>
+      <div class="row"><span class="k">Stage</span><span class="v">Root Cause</span></div>
+      <div class="row"><span class="k">Confidence</span><span class="v">82%</span></div>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="tb-title" id="tbTitle">Executive Overview<small id="tbSub">Defect investigation portfolio</small></div>
+    <div class="tb-spacer"></div>
+    <span class="chip crit"><span class="dot"></span>DF-EV-7821 · CRITICAL</span>
+    <div class="tb-conf"><div class="lbl">AI confidence<br><b>82%</b></div>
+      <svg width="34" height="34" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(148,163,184,.18)" stroke-width="4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#4D9DFF" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="17" transform="rotate(-90 18 18)"/></svg></div>
+    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="n">5</span></button>
+    <div class="avatar">AM</div>
+  </header>
+
+  <main class="main" id="main"><!-- VIEWS INJECTED --></main>
+</div>
+
+<!-- floating copilot -->
+<button class="fab" id="fab" onclick="toggleCopilot()"><span class="pexp"></span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 3a5 5 0 0 1 5 5v1a5 5 0 0 1-1 3l1 4-4-1a5 5 0 0 1-6-4.9V8a5 5 0 0 1 5-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<div class="copanel" id="copanel">
+  <div class="co-head">
+    <div class="cav"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 3a5 5 0 0 1 5 5v1a5 5 0 0 1-1 3l1 4-4-1a5 5 0 0 1-6-4.9V8a5 5 0 0 1 5-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="ci"><b>DefectScope Copilot</b><div class="ctx" id="coCtx">Context · DF-EV-7821 · Root Cause</div></div>
+    <div class="close" onclick="toggleCopilot()"><svg viewBox="0 0 24 24" width="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg></div>
+  </div>
+  <div class="co-body" id="coBody"></div>
+  <div class="co-foot">
+    <div class="chat-input"><input id="coInput" placeholder="Ask about this case…" onkeydown="if(event.key==='Enter')coSend()"><button onclick="coSend()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h15M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+  </div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const trace=[
+ {vin:'VIN-001',batch:'CB-7821',po:'PO-1001 · L1',mod:'MB-8901',pack:'BP-1001',cust:'ABC Motors',ship:'Delivered',insp:'Fail 89°C',qms:'Critical',mc:'Temp spike',risk:'confirmed'},
+ {vin:'VIN-002',batch:'CB-7821',po:'PO-1001 · L1',mod:'MB-8901',pack:'BP-1001',cust:'XYZ Auto',ship:'In transit',insp:'Fail 89°C',qms:'Critical',mc:'Temp spike',risk:'confirmed'},
+ {vin:'VIN-003',batch:'CB-7821',po:'PO-1001 · L1',mod:'MB-8902',pack:'BP-1002',cust:'DriveTech',ship:'Delivered',insp:'Fail 85°C',qms:'High',mc:'Temp spike',risk:'confirmed'},
+ {vin:'VIN-004',batch:'CB-7821',po:'PO-1002 · L2',mod:'MB-8903',pack:'BP-1003',cust:'EcoDrive',ship:'Delivered',insp:'Pass 62°C',qms:'None',mc:'Volt. fluct.',risk:'review'},
+ {vin:'VIN-005',batch:'CB-7821',po:'PO-1004 · L3',mod:'MB-8904',pack:'BP-1004',cust:'Speed EV',ship:'In transit',insp:'Pending',qms:'Medium',mc:'Sensor fail',risk:'probable'},
+ {vin:'VIN-006',batch:'CB-7822',po:'PO-1003 · L1',mod:'MB-8905',pack:'BP-1005',cust:'GreenDrive',ship:'At plant',insp:'Pass 61°C',qms:'None',mc:'Normal',risk:'cleared'},
+];
+const riskLabel={confirmed:'Confirmed',probable:'Probable',review:'Under review',cleared:'Cleared'};
+const modules={
+ 'MB-8901':{risk:'Confirmed',cls:'confirmed',pack:'BP-1001',vins:'VIN-001, VIN-002',insp:'Fail · 89°C',qms:'Critical · thermal',mc:'Temp spike (Line-01)'},
+ 'MB-8902':{risk:'Confirmed',cls:'confirmed',pack:'BP-1002',vins:'VIN-003',insp:'Fail · 85°C',qms:'High · voltage',mc:'Temp spike (Line-01)'},
+ 'MB-8903':{risk:'Under review',cls:'review',pack:'BP-1003',vins:'VIN-004',insp:'Pass · 62°C',qms:'None',mc:'Voltage fluctuation'},
+ 'MB-8904':{risk:'Probable',cls:'probable',pack:'BP-1004',vins:'VIN-005',insp:'Pending',qms:'Medium · drift',mc:'Sensor failure (Line-03)'},
+ 'MB-8905':{risk:'Cleared',cls:'cleared',pack:'BP-1005',vins:'VIN-006',insp:'Pass · 61°C',qms:'None',mc:'Normal'},
+};
+const rcClass={'Confirmed':'confirmed','Probable':'probable','Under review':'review','Cleared':'cleared','Not affected':'grey'};
+
+/* ============ VIEW TEMPLATES ============ */
+const arrow='<div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+
+function trackerHTML(){
+ const stages=[['Issue Reported','done'],['Data Collection','done'],['Evidence Analysis','done'],['Root Cause Detection','now'],['AI Recommendation','wait'],['Stakeholder Review','wait'],['Resolution','wait'],['Closure','wait']];
+ return `<div class="tracker">
+  <div class="th"><h3 style="font-size:14px">Investigation status · lifecycle</h3><div class="now">Current stage · <b>Root Cause Detection</b> · started 2h ago</div></div>
+  <div class="stages">${stages.map((s,i)=>`<div class="stage ${s[1]}"><div class="sd">${s[1]==='done'?'✓':i+1}</div><div class="sl">${s[0]}</div></div>`).join('')}</div>
+  <div class="metrics">
+   <div class="m"><div class="mv" style="color:var(--blue)">65%</div><div class="ml">Stage completion</div></div>
+   <div class="m"><div class="mv">82%</div><div class="ml">AI confidence</div></div>
+   <div class="m"><div class="mv">1.2d</div><div class="ml">Days elapsed</div></div>
+   <div class="m"><div class="mv">~0.8d</div><div class="ml">Est. to next stage</div></div>
+   <div class="m"><div class="mv" style="color:#ff9a90">Escalated</div><div class="ml">Status</div></div>
+  </div></div>`;
+}
+
+const VIEWS={
+
+exec:()=>`
+ <div class="page-head"><div><div class="eyebrow">Portfolio · Command View</div><h1>Executive Overview</h1><p>All active defect investigations across plants, monitored in real time. Priority case highlighted for immediate attention.</p></div><button class="btn btn-ghost">Export portfolio report</button></div>
+ <div class="grid g-6">
+  <div class="card kpi"><div class="lab">Total active cases</div><div class="num">14</div><div class="foot"><span class="dn">▲ 2</span> vs last week</div></div>
+  <div class="card kpi"><div class="lab"><span class="sw" style="background:var(--red)"></span>Critical</div><div class="num" style="color:#ff9a90">3</div><div class="foot">1 escalated</div></div>
+  <div class="card kpi"><div class="lab">Under investigation</div><div class="num">8</div><div class="foot">avg stage 4 / 8</div></div>
+  <div class="card kpi"><div class="lab">Resolved today</div><div class="num" style="color:#7ee6b0">5</div><div class="foot">closure rate 91%</div></div>
+  <div class="card kpi"><div class="lab">Avg resolution</div><div class="num">3.4<span style="font-size:15px;color:var(--muted-2)">d</span></div><div class="foot"><span class="dn">▼ 0.6d</span> improving</div></div>
+  <div class="card kpi"><div class="lab">Recurrence rate</div><div class="num">6.2<span style="font-size:15px;color:var(--muted-2)">%</span></div><div class="foot"><span class="dn">▼ 1.1%</span> QoQ</div></div>
+ </div>
+ <div class="grid g-2-1 section-gap">
+  <div class="card"><h3>Active case portfolio</h3><div class="sub">Select a case to open its investigation workspace</div>
+   <div class="portfolio">
+    <div class="pcase priority" onclick="go('case')">
+     <div class="sev" style="background:rgba(217,45,32,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#ff8a7e" stroke-width="1.8"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/><path d="M12 9v5" stroke-linecap="round"/></svg></div>
+     <div class="pmid"><div class="cid">DF-EV-7821 <span class="rc critical">Critical</span> <span class="rc grey">Escalated</span></div><div class="cdesc">EV Battery Pack · CB-7821 contamination · thermal instability · VoltCell Energy</div><div class="prog"><i style="width:65%"></i></div></div>
+     <div class="pend"><div class="risk" style="color:#ff9a90">91</div><div class="st">Investigation · 65%</div><div class="open">Open investigation →</div></div>
+    </div>
+    <div class="pcase">
+     <div class="sev" style="background:rgba(247,144,9,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb95e" stroke-width="1.8"><rect x="3" y="7" width="18" height="10" rx="2"/></svg></div>
+     <div class="pmid"><div class="cid">DF-EV-7795 <span class="rc high">High</span></div><div class="cdesc">Battery Module · MB-series solder voids · root cause found</div><div class="prog"><i style="width:82%"></i></div></div>
+     <div class="pend"><div class="risk" style="color:#ffc078">74</div><div class="st">Root cause · 82%</div></div>
+    </div>
+    <div class="pcase">
+     <div class="sev" style="background:rgba(254,200,75,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#ffe3a3" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></div>
+     <div class="pmid"><div class="cid">DF-EV-7812 <span class="rc medium">Medium</span></div><div class="cdesc">Controller Unit · firmware calibration drift · monitoring</div><div class="prog"><i style="width:38%"></i></div></div>
+     <div class="pend"><div class="risk" style="color:#ffe3a3">45</div><div class="st">Monitoring · 38%</div></div>
+    </div>
+    <div class="pcase">
+     <div class="sev" style="background:rgba(18,183,106,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#7ee6b0" stroke-width="1.8"><path d="m5 12 5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+     <div class="pmid"><div class="cid">DF-EV-7764 <span class="rc low">Low</span></div><div class="cdesc">Sensor Suite · intermittent read fault · resolved</div><div class="prog"><i style="width:100%"></i></div></div>
+     <div class="pend"><div class="risk" style="color:#7ee6b0">12</div><div class="st">Resolved</div></div>
+    </div>
+   </div>
+  </div>
+  <div class="card"><h3>AI insights</h3><div class="sub">Cross-case pattern detection</div>
+   <div class="insight"><div class="ii"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="it">Battery module supplier <b>VoltCell Energy</b> shows a <b>67% correlation</b> with recent thermal failures across 3 cases.</div></div>
+   <div class="insight"><div class="ii"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3" stroke-linecap="round"/></svg></div><div class="it">Defect pattern resembles <b>DF-EV-7610</b>, resolved in March — targeted recall closed it in 2.1 days.</div></div>
+   <div class="insight"><div class="ii"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 3v18M5 8h14M5 16h14"/></svg></div><div class="it">Line-03 sensor gaps recur in <b>2 open cases</b> — recommend adding sensor redundancy.</div></div>
+   <h3 style="margin-top:18px">Recent activity</h3><div class="sub">Live stream</div>
+   <div class="feed">
+    <div class="fitem"><div class="fd" style="background:rgba(45,212,191,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#7fe6d5" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ft">AI detected thermal anomaly on BP-1001<small>DF-EV-7821 · 4m ago</small></div></div>
+    <div class="fitem"><div class="fd" style="background:rgba(77,157,255,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#9cc7ff" stroke-width="1.8"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></svg></div><div class="ft">New supplier inspection report uploaded<small>DF-EV-7821 · 22m ago</small></div></div>
+    <div class="fitem"><div class="fd" style="background:rgba(77,157,255,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#9cc7ff" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 5 8-5"/></svg></div><div class="ft">Communication sent to VoltCell Energy<small>DF-EV-7821 · 1h ago</small></div></div>
+    <div class="fitem"><div class="fd" style="background:rgba(18,183,106,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#7ee6b0" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ft">Root cause confidence 74% → 82%<small>DF-EV-7821 · 1h ago</small></div></div>
+    <div class="fitem"><div class="fd" style="background:rgba(217,45,32,.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#ff8a7e" stroke-width="1.8"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/></svg></div><div class="ft">Investigation escalated to Recall Board<small>DF-EV-7821 · 2h ago</small></div></div>
+   </div>
+  </div>
+ </div>`,
+
+cases:()=>`
+ <div class="page-head"><div><div class="eyebrow">Portfolio</div><h1>All Cases</h1><p>Every defect investigation across the network. DF-EV-7821 is the current priority.</p></div></div>
+ <div class="card" style="padding:8px 8px 4px;overflow-x:auto"><table class="tbl">
+  <thead><tr><th>Case ID</th><th>Severity</th><th>Product</th><th>Supplier / Batch</th><th>Stage</th><th>Risk</th><th>Status</th></tr></thead>
+  <tbody>
+   <tr onclick="go('case')" style="cursor:pointer"><td style="color:#fff;font-weight:700">DF-EV-7821</td><td><span class="rc critical">Critical</span></td><td>EV Battery Pack</td><td>VoltCell · CB-7821</td><td>Root Cause</td><td>91</td><td>Investigation</td></tr>
+   <tr><td style="color:#fff">DF-EV-7795</td><td><span class="rc high">High</span></td><td>Battery Module</td><td>VoltCell · MB-77</td><td>Root Cause Found</td><td>74</td><td>Analysis</td></tr>
+   <tr><td style="color:#fff">DF-EV-7812</td><td><span class="rc medium">Medium</span></td><td>Controller Unit</td><td>PowerSense · BMS-88</td><td>Data Collection</td><td>45</td><td>Monitoring</td></tr>
+   <tr><td style="color:#fff">DF-EV-7764</td><td><span class="rc low">Low</span></td><td>Sensor Suite</td><td>SafeSeal · SEP-44</td><td>Closure</td><td>12</td><td>Resolved</td></tr>
+   <tr><td style="color:#fff">DF-EV-7610</td><td><span class="rc high">High</span></td><td>Battery Pack</td><td>VoltCell · CB-61</td><td>Closure</td><td>—</td><td>Resolved (Mar)</td></tr>
+  </tbody></table></div>`,
+
+overview:()=>`
+ ${trackerHTML()}
+ <div class="grid section-gap">
+  <div class="alert">
+   <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/><path d="M12 9v5M12 17.5v.5" stroke-linecap="round"/></svg></div>
+   <div class="body"><div class="top"><h2>Critical defect detected</h2><span class="rc confirmed">Thermal instability</span></div>
+    <div style="font-size:13px;color:var(--muted)">Supplier <b style="color:var(--text)">VoltCell Energy</b> flagged suspected contamination in lithium cell batch <b style="color:#ff9a90;font-family:var(--mono)">CB-7821</b>. Impact analysis has traced the batch across production, packs and shipments.</div>
+    <div class="meta"><span>Source · <b>Supplier alert + inspection</b></span><span>Detected · <b>2h 14m ago</b></span><span>Plants · <b>Plant-A, Plant-C</b></span><span>Confidence · <b>86%</b></span></div></div>
+   <div class="cta"><button class="btn btn-danger" onclick="goStage('impact')">View impact analysis</button><button class="btn btn-ghost" onclick="goStage('twin')">Open digital twin</button></div>
+  </div>
+  <div class="grid g-4" style="grid-column:1/-1">
+   <div class="card kpi"><div class="lab"><span class="sw" style="background:var(--red)"></span>Confirmed</div><div class="num" style="color:#ff9a90">3</div><div class="foot">recall + stop-sale</div></div>
+   <div class="card kpi"><div class="lab"><span class="sw" style="background:var(--orange)"></span>Probable</div><div class="num" style="color:#ffc078">1</div><div class="foot">hold + inspect</div></div>
+   <div class="card kpi"><div class="lab"><span class="sw" style="background:var(--yellow)"></span>Under review</div><div class="num" style="color:#ffe3a3">1</div><div class="foot">validate</div></div>
+   <div class="card kpi"><div class="lab"><span class="sw" style="background:var(--green)"></span>Cleared</div><div class="num" style="color:#7ee6b0">1</div><div class="foot">excluded (CB-7822)</div></div>
+  </div>
+  <div class="grid g-1-2" style="grid-column:1/-1">
+   <div class="card"><h3>Risk split</h3><div class="sub">6 vehicles evaluated · avoid over-recall</div>
+    <div class="donut-wrap"><svg width="150" height="150" viewBox="0 0 42 42">
+     <circle cx="21" cy="21" r="15.9" fill="none" stroke="#0d1730" stroke-width="7"/>
+     <circle cx="21" cy="21" r="15.9" fill="none" stroke="#D92D20" stroke-width="7" stroke-dasharray="50 50" stroke-dashoffset="25"/>
+     <circle cx="21" cy="21" r="15.9" fill="none" stroke="#F79009" stroke-width="7" stroke-dasharray="16.7 83.3" stroke-dashoffset="-25"/>
+     <circle cx="21" cy="21" r="15.9" fill="none" stroke="#FEC84B" stroke-width="7" stroke-dasharray="16.7 83.3" stroke-dashoffset="-41.7"/>
+     <circle cx="21" cy="21" r="15.9" fill="none" stroke="#12B76A" stroke-width="7" stroke-dasharray="16.7 83.3" stroke-dashoffset="-58.4"/>
+     <text x="21" y="20" text-anchor="middle" font-size="7" font-weight="800" fill="#F4F7FF" font-family="JetBrains Mono">6</text><text x="21" y="26" text-anchor="middle" font-size="3" fill="#98A2B3">VEHICLES</text></svg>
+     <div class="legend"><div class="li"><span class="sw" style="background:var(--red)"></span><span class="nm">Confirmed</span><span class="vl">3</span></div><div class="li"><span class="sw" style="background:var(--orange)"></span><span class="nm">Probable</span><span class="vl">1</span></div><div class="li"><span class="sw" style="background:var(--yellow)"></span><span class="nm">Under review</span><span class="vl">1</span></div><div class="li"><span class="sw" style="background:var(--green)"></span><span class="nm">Cleared</span><span class="vl">1</span></div></div></div></div>
+   <div class="card"><h3>Product genealogy — how far the defect reached</h3><div class="sub">Reconstructed from ERP · MES · QMS · Shipment</div>
+    <div class="geno">
+     <div class="node risk-red"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M3 21V8l7-5 7 5v13M3 21h18"/></svg></div><div class="stg">Supplier</div><div class="id">VoltCell</div><div class="cnt">CB-7821</div></div>${arrow}
+     <div class="node risk-red"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></div><div class="stg">Prod. Orders</div><div class="id">3 POs</div><div class="cnt">1001·1002·1004</div></div>${arrow}
+     <div class="node risk-orange"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="7" width="18" height="10" rx="2"/></svg></div><div class="stg">Modules</div><div class="id">4 batches</div><div class="cnt">MB-8901…04</div></div>${arrow}
+     <div class="node risk-orange"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="4" y="6" width="16" height="12" rx="2"/></svg></div><div class="stg">Packs</div><div class="id">4 batches</div><div class="cnt">BP-1001…04</div></div>${arrow}
+     <div class="node"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M5 17h14l-1.5-5.5A2 2 0 0 0 15.6 10H8.4a2 2 0 0 0-1.9 1.5L5 17Z"/><circle cx="8" cy="17" r="1.5"/><circle cx="16" cy="17" r="1.5"/></svg></div><div class="stg">Vehicles</div><div class="id">5 VINs</div><div class="cnt">VIN-001…05</div></div>${arrow}
+     <div class="node"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></div><div class="stg">Customers</div><div class="id">5 dealers</div><div class="cnt">4 regions</div></div>
+    </div></div>
+  </div>
+ </div>`,
+
+impact:()=>`
+ <div class="page-head"><div><div class="eyebrow">AI Impact Scan</div><h1>Impact Explorer</h1><p>Every vehicle carrying a component traced to CB-7821, joined live across 7 source systems.</p></div><button class="btn btn-ghost">Export trace</button></div>
+ <div class="card" style="padding:8px 8px 4px;overflow-x:auto"><table class="tbl">
+  <thead><tr><th>VIN</th><th>Batch</th><th>PO / Line</th><th>Module</th><th>Pack</th><th>Customer</th><th>Shipment</th><th>Inspection</th><th>QMS</th><th>Machine</th><th>Risk</th></tr></thead>
+  <tbody>${trace.map(r=>`<tr><td style="color:#fff;font-weight:600">${r.vin}</td><td>${r.batch}</td><td>${r.po}</td><td>${r.mod}</td><td>${r.pack}</td><td class="cust">${r.cust}</td><td>${r.ship}</td><td>${r.insp}</td><td>${r.qms}</td><td>${r.mc}</td><td><span class="rc ${r.risk}">${riskLabel[r.risk]}</span></td></tr>`).join('')}</tbody></table></div>
+ <div class="grid g-3 section-gap">
+  <div class="card"><div class="lab" style="font-size:11.5px;color:var(--muted-2);font-weight:600">At-risk material</div><div style="font-size:22px;font-weight:800;font-family:var(--mono);margin-top:6px">2,000 <span style="font-size:13px;color:var(--muted)">cells</span></div><div class="foot" style="font-size:11.5px;color:var(--muted);margin-top:4px">PO-1001 · 1002 · 1004</div></div>
+  <div class="card"><div class="lab" style="font-size:11.5px;color:var(--muted-2);font-weight:600">Shipments to stop</div><div style="font-size:22px;font-weight:800;font-family:var(--mono);margin-top:6px">2 <span style="font-size:13px;color:var(--muted)">in transit</span></div><div class="foot" style="font-size:11.5px;color:var(--muted);margin-top:4px">VIN-002 (IL) · VIN-005 (TX)</div></div>
+  <div class="card"><div class="lab" style="font-size:11.5px;color:var(--muted-2);font-weight:600">Correctly excluded</div><div style="font-size:22px;font-weight:800;font-family:var(--mono);margin-top:6px;color:#7ee6b0">1 <span style="font-size:13px;color:var(--muted)">vehicle</span></div><div class="foot" style="font-size:11.5px;color:var(--muted);margin-top:4px">CB-7822 · no signal</div></div>
+ </div>`,
+
+twin:()=>`
+ <div class="page-head"><div><div class="eyebrow">Adobe Substance 3D · Digital Twin</div><h1>Battery Digital Twin</h1><p>Live 3D pack — drag to orbit, hover a module for its status, click to load the evidence trail.</p></div></div>
+ <div class="twin">
+  <div class="twin-wrap">
+   <span class="adobe-tag twin-badge">Substance 3D render</span>
+   <canvas id="packTwin"></canvas>
+   <div class="twin-legend"><span class="li"><span class="sw" style="background:#D92D20"></span>Confirmed</span><span class="li"><span class="sw" style="background:#F79009"></span>Probable</span><span class="li"><span class="sw" style="background:#FEC84B"></span>Review</span><span class="li"><span class="sw" style="background:#12B76A"></span>Cleared</span></div>
+   <div class="twin-hint">Drag to rotate · scroll to zoom · click a module</div>
+   <div class="twin-tip" id="twinTip"><div class="n"></div><div class="s"></div></div>
+   <div class="twin-fallback" id="twinFallback">3D view needs WebGL. The module trace is still available in the Impact Explorer.</div>
+  </div>
+  <div class="card drawer" id="drawer"><h4>Evidence drawer</h4><div class="empty" id="drawerEmpty">Click a highlighted module in the 3D pack to inspect its trace, inspection result and machine log.</div><div id="drawerBody" style="display:none"></div></div>
+ </div>`,
+
+risk:()=>`
+ <div class="page-head"><div><div class="eyebrow">Risk Radius · Matrix · Decision Simulator</div><h1>Risk &amp; Decision</h1><p>How big is the problem, where is it, and what does each response cost?</p></div></div>
+ <div class="grid g-3">
+  <div class="card"><h3>Risk radius</h3><div class="sub">Bands by certainty · blip = vehicle</div>
+   <div class="radius" id="radius"><div class="ring" style="width:280px;height:280px;border-color:rgba(217,45,32,.18)"></div><div class="ring" style="width:200px;height:200px;border-color:rgba(247,144,9,.2)"></div><div class="ring" style="width:120px;height:120px;border-color:rgba(254,200,75,.22)"></div><div class="core"><b>CB-7821<br>SOURCE</b></div></div></div>
+  <div class="card"><h3>Risk matrix</h3><div class="sub">Severity × likelihood</div>
+   <div class="matrix">
+    <div class="mh"></div><div class="mh">Low</div><div class="mh">Med</div><div class="mh">High</div>
+    <div class="mh">Critical</div><div class="mcell" style="background:rgba(247,144,9,.12);color:#ffc078">—</div><div class="mcell" style="background:rgba(217,45,32,.12);color:#ff9a90">1</div><div class="mcell" style="background:rgba(217,45,32,.22);color:#ff9a90">2</div>
+    <div class="mh">High</div><div class="mcell" style="background:rgba(254,200,75,.1);color:#ffe3a3">—</div><div class="mcell" style="background:rgba(247,144,9,.14);color:#ffc078">1</div><div class="mcell" style="background:rgba(247,144,9,.1);color:#ffc078">—</div>
+    <div class="mh">Low</div><div class="mcell" style="background:rgba(18,183,106,.12);color:#7ee6b0">1</div><div class="mcell" style="background:rgba(254,200,75,.1);color:#ffe3a3">1</div><div class="mcell" style="background:rgba(247,144,9,.1);color:#ffc078">—</div>
+   </div>
+   <div style="font-size:11.5px;color:var(--muted-2);margin-top:14px">2 vehicles land in the critical-high cell — the recall-critical zone.</div></div>
+  <div class="card"><h3>Exposure by region</h3><div class="sub">Where affected vehicles are now</div>
+   <div class="src"><div class="nm"><span class="di" style="background:var(--red)"></span>Texas</div><div class="track"><div class="fill" style="width:66%;background:var(--red)"></div></div><div class="pct">2</div></div>
+   <div class="src"><div class="nm"><span class="di" style="background:var(--red)"></span>Illinois</div><div class="track"><div class="fill" style="width:33%;background:var(--red)"></div></div><div class="pct">1</div></div>
+   <div class="src"><div class="nm"><span class="di" style="background:var(--red)"></span>Florida</div><div class="track"><div class="fill" style="width:33%;background:var(--red)"></div></div><div class="pct">1</div></div>
+   <div class="src"><div class="nm"><span class="di" style="background:var(--yellow)"></span>California</div><div class="track"><div class="fill" style="width:33%;background:var(--yellow)"></div></div><div class="pct">1</div></div>
+   <div class="src"><div class="nm"><span class="di" style="background:var(--green)"></span>Washington</div><div class="track"><div class="fill" style="width:20%;background:var(--green)"></div></div><div class="pct">0</div></div></div>
+ </div>
+ <div class="page-head section-gap" style="margin-bottom:6px"><div><h1 style="font-size:18px">Decision simulator</h1><p>Three responses compared on cost, field-safety risk and product waste.</p></div></div>
+ <div class="grid g-3">
+  <div class="scn" onclick="pickScn(this)"><div class="snm">A · Recall all at-risk</div><div class="sdesc">Pull every CB-7821 vehicle</div>
+   <div class="metric"><div class="ml"><span class="k">Cost</span><span class="v">$4.2M</span></div><div class="mt"><div class="mf" style="width:92%;background:var(--red)"></div></div></div>
+   <div class="metric"><div class="ml"><span class="k">Field-safety risk</span><span class="v">Very low</span></div><div class="mt"><div class="mf" style="width:12%;background:var(--green)"></div></div></div>
+   <div class="metric"><div class="ml"><span class="k">Product waste</span><span class="v">High</span></div><div class="mt"><div class="mf" style="width:85%;background:var(--orange)"></div></div></div></div>
+  <div class="scn" onclick="pickScn(this)"><div class="snm">B · Confirmed only</div><div class="sdesc">Recall 3 confirmed VINs</div>
+   <div class="metric"><div class="ml"><span class="k">Cost</span><span class="v">$1.8M</span></div><div class="mt"><div class="mf" style="width:40%;background:var(--green)"></div></div></div>
+   <div class="metric"><div class="ml"><span class="k">Field-safety risk</span><span class="v">Med-high</span></div><div class="mt"><div class="mf" style="width:68%;background:var(--red)"></div></div></div>
+   <div class="metric"><div class="ml"><span class="k">Product waste</span><span class="v">Low</span></div><div class="mt"><div class="mf" style="width:28%;background:var(--green)"></div></div></div></div>
+  <div class="scn rec" onclick="pickScn(this)"><div class="tag">RECOMMENDED</div><div class="snm">C · Hold + inspect + targeted</div><div class="sdesc">Recall confirmed, hold probable</div>
+   <div class="metric"><div class="ml"><span class="k">Cost</span><span class="v">$2.4M</span></div><div class="mt"><div class="mf" style="width:54%;background:var(--teal)"></div></div></div>
+   <div class="metric"><div class="ml"><span class="k">Field-safety risk</span><span class="v">Low</span></div><div class="mt"><div class="mf" style="width:22%;background:var(--green)"></div></div></div>
+   <div class="metric"><div class="ml"><span class="k">Product waste</span><span class="v">Balanced</span></div><div class="mt"><div class="mf" style="width:45%;background:var(--teal)"></div></div></div></div>
+ </div>`,
+
+evidence:()=>`
+ <div class="page-head"><div><div class="eyebrow">Explainability · Evidence Explorer</div><h1>Evidence Explorer</h1><p>The actual documents, images and readings behind the trace — with AI-highlighted findings and each source's impact on confidence.</p></div></div>
+ <div class="grid g-2-1">
+  <div class="card"><h3>Evidence items</h3><div class="sub">Click to expand the AI-extracted finding</div>
+   <div id="evList"></div>
+  </div>
+  <div>
+   <div class="card"><h3>Overall confidence</h3><div class="sub">Weighted across sources</div>
+    <div style="display:flex;justify-content:center;padding:6px 0 4px"><svg width="150" height="150" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#0d1730" stroke-width="6"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="url(#eg)" stroke-width="6" stroke-linecap="round" stroke-dasharray="86 100" transform="rotate(-90 21 21)"/><defs><linearGradient id="eg"><stop offset="0" stop-color="#4D9DFF"/><stop offset="1" stop-color="#2DD4BF"/></linearGradient></defs><text x="21" y="20" text-anchor="middle" font-size="9" font-weight="800" fill="#F4F7FF" font-family="JetBrains Mono">86%</text><text x="21" y="27" text-anchor="middle" font-size="3" fill="#98A2B3">TRACE</text></svg></div></div>
+   <div class="card section-gap ev-corr"><h3>Evidence correlation</h3><div class="sub">Source → impact score</div>
+    <div class="src"><div class="nm"><span class="di" style="background:var(--green)"></span>Supplier Audit</div><div class="track"><div class="fill" style="width:92%;background:var(--green)"></div></div><div class="pct">92%</div></div>
+    <div class="src"><div class="nm"><span class="di" style="background:var(--blue)"></span>Machine Logs</div><div class="track"><div class="fill" style="width:84%;background:var(--blue)"></div></div><div class="pct">84%</div></div>
+    <div class="src"><div class="nm"><span class="di" style="background:var(--blue)"></span>Inspection Reports</div><div class="track"><div class="fill" style="width:78%;background:var(--blue)"></div></div><div class="pct">78%</div></div>
+    <div class="src"><div class="nm"><span class="di" style="background:var(--yellow)"></span>Customer Complaints</div><div class="track"><div class="fill" style="width:61%;background:var(--yellow)"></div></div><div class="pct">61%</div></div>
+    <div class="gaps"><div class="gh"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#FEC84B" stroke-width="1.8"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/><path d="M12 9v5" stroke-linecap="round"/></svg>Data gaps</div><div class="gi">Machine logs partial on Line-03 (sensor failure).</div><div class="gi">Inspection pending for pack BP-1004.</div></div>
+   </div>
+  </div>
+ </div>`,
+
+copilot:()=>`
+ <div class="page-head"><div><div class="eyebrow">AI Copilot Workspace · Human-in-the-loop</div><h1>AI Copilot</h1><p>Ask the copilot anything about this case — it answers with cited evidence — then act on tiered recommendations you approve.</p></div></div>
+ <div class="copilot">
+  <div class="card"><h3>Investigation assistant</h3><div class="sub">Context-aware · DF-EV-7821 · Root Cause stage</div>
+   <div class="prompt-chips" id="wsChips"></div>
+   <div class="chat"><div class="chat-log" id="wsLog"></div>
+    <div class="chat-input"><input id="wsInput" placeholder="Ask about root cause, evidence, similar cases…" onkeydown="if(event.key==='Enter')wsSend()"><button onclick="wsSend()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h15M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>
+  </div>
+  <div class="card"><h3>Suggested actions</h3><div class="sub">Approve to route into the workflow</div>
+   <div class="act-tier"><div class="tl"><span class="d" style="background:var(--red)"></span>Immediate</div>
+    <div class="action"><div class="an">Recall 3 confirmed VINs &amp; stop sale</div><div class="am"><span class="mm">Impact <b>High</b></span><span class="mm">Cost <b>$1.8M</b></span><span class="mm">Risk ↓ <b>62%</b></span><span class="mm">Effort <b>Low</b></span></div></div>
+    <div class="action"><div class="an">Stop in-transit shipment (VIN-002)</div><div class="am"><span class="mm">Impact <b>High</b></span><span class="mm">Cost <b>$40k</b></span><span class="mm">Risk ↓ <b>18%</b></span><span class="mm">Effort <b>Low</b></span></div></div></div>
+   <div class="act-tier"><div class="tl"><span class="d" style="background:var(--orange)"></span>Short-term</div>
+    <div class="action"><div class="an">Hold + inspect probable VIN-005 &amp; BP-1004</div><div class="am"><span class="mm">Impact <b>Med</b></span><span class="mm">Cost <b>$0.6M</b></span><span class="mm">Risk ↓ <b>12%</b></span><span class="mm">Effort <b>Med</b></span></div></div>
+    <div class="action"><div class="an">Raise CAPA with VoltCell Energy</div><div class="am"><span class="mm">Impact <b>Med</b></span><span class="mm">Cost <b>$15k</b></span><span class="mm">Risk ↓ <b>8%</b></span><span class="mm">Effort <b>Low</b></span></div></div></div>
+   <div class="act-tier"><div class="tl"><span class="d" style="background:var(--teal)"></span>Long-term</div>
+    <div class="action"><div class="an">Add Line-03 sensor redundancy</div><div class="am"><span class="mm">Impact <b>High</b></span><span class="mm">Cost <b>$0.9M</b></span><span class="mm">Risk ↓ <b>22%</b></span><span class="mm">Effort <b>High</b></span></div></div>
+    <div class="action"><div class="an">Supplier audit program + tighter thresholds</div><div class="am"><span class="mm">Impact <b>High</b></span><span class="mm">Cost <b>$0.3M</b></span><span class="mm">Risk ↓ <b>30%</b></span><span class="mm">Effort <b>Med</b></span></div></div></div>
+   <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px" onclick="approve(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m5 12 5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Approve recommended set</button>
+  </div>
+ </div>
+ <div class="card section-gap"><h3>Approval workflow</h3><div class="sub">Human remains in control · decision is auditable</div>
+  <div class="flow" style="display:grid;grid-template-columns:repeat(5,1fr);gap:0" id="approvalFlow">
+   <div class="step done" style="padding-bottom:0"><div class="sd">✓</div><div class="sc"><div class="t">AI analysis</div><div class="m">86% conf.</div></div></div>
+   <div class="step now" id="stepQM" style="padding-bottom:0"><div class="sd">2</div><div class="sc"><div class="t">Quality Mgr</div><div class="m" id="qmState">Awaiting</div></div></div>
+   <div class="step wait" style="padding-bottom:0"><div class="sd">3</div><div class="sc"><div class="t">Plant Head</div><div class="m">Queued</div></div></div>
+   <div class="step wait" style="padding-bottom:0"><div class="sd">4</div><div class="sc"><div class="t">Compliance</div><div class="m">Queued</div></div></div>
+   <div class="step wait" style="padding-bottom:0"><div class="sd">5</div><div class="sc"><div class="t">Recall Board</div><div class="m">If expands</div></div></div>
+  </div></div>`,
+
+comms:()=>`
+ <div class="page-head"><div><div class="eyebrow">Adobe Communication Center · Guided workflow</div><h1>Communication</h1><p>Four steps from stakeholder to send — the AI drafts, you approve.</p></div></div>
+ <div class="commsteps">
+  <div class="cstep on" id="cs1"><div class="cn">STEP 1</div><div class="ct">Select stakeholder</div><div class="cs">Who is this for?</div></div>
+  <div class="cstep" id="cs2"><div class="cn">STEP 2</div><div class="ct">Message type</div><div class="cs">What kind?</div></div>
+  <div class="cstep" id="cs3"><div class="cn">STEP 3</div><div class="ct">AI draft</div><div class="cs">Generate</div></div>
+  <div class="cstep" id="cs4"><div class="cn">STEP 4</div><div class="ct">Review &amp; send</div><div class="cs">One-click</div></div>
+ </div>
+ <div class="grid g-2-1">
+  <div class="card">
+   <div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px">1 · Stakeholder</div>
+    <div class="opt-grid" id="stakeOpts">${['Supplier','Quality Manager','Plant Head','Production Team'].map(s=>`<div class="opt" onclick="selStake(this,'${s}')">${s}</div>`).join('')}</div></div>
+   <div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--muted-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px">2 · Message type</div>
+    <div class="opt-grid" id="typeOpts">${['Alert','Escalation','Investigation Update','Resolution Notification'].map(s=>`<div class="opt" onclick="selType(this,'${s}')">${s}</div>`).join('')}</div></div>
+   <button class="btn btn-primary" onclick="genDraft()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v3M9 21h6M10 21v-3.5a5 5 0 1 1 4 0V21" stroke-linecap="round"/></svg>Generate AI draft</button>
+   <div class="draft" id="draftBox" style="display:none"></div>
+   <div id="sendRow" style="display:none;margin-top:12px"><button class="btn btn-primary" onclick="sendComm(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 12h15M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>Approve &amp; send</button> <button class="btn btn-ghost">Edit</button></div>
+  </div>
+  <div class="card"><h3>Communication timeline</h3><div class="sub">Case DF-EV-7821</div>
+   <div class="flow" id="commTimeline">
+    <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Alert sent to VoltCell Energy</div><div class="m">Supplier · escalation</div></div><span class="stamp">09:30</span></div>
+    <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Response received</div><div class="m">Supplier acknowledged CAPA</div></div><span class="stamp">11:45</span></div>
+    <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Escalation to Quality Manager</div><div class="m">A. Mehta notified</div></div><span class="stamp">13:20</span></div>
+    <div class="step now"><div class="sd">4</div><div class="sc"><div class="t">AI investigation summary generated</div><div class="m">Awaiting dealer/customer notices</div></div><span class="stamp">15:15</span></div>
+   </div></div>
+ </div>`,
+
+monitor:()=>`
+ <div class="page-head"><div><div class="eyebrow">Containment</div><h1>Live Monitoring</h1><p>Track the recall to closure across vehicles, customers, dealers and shipments.</p></div></div>
+ <div class="grid g-4">
+  <div class="card kpi"><div class="lab">Vehicles recalled</div><div class="num">2<span style="font-size:15px;color:var(--muted-2)">/3</span></div><div class="foot">67%</div></div>
+  <div class="card kpi"><div class="lab">Customers notified</div><div class="num">4<span style="font-size:15px;color:var(--muted-2)">/5</span></div><div class="foot">1 pending</div></div>
+  <div class="card kpi"><div class="lab">Shipments stopped</div><div class="num" style="color:#7ee6b0">2<span style="font-size:15px;color:var(--muted-2)">/2</span></div><div class="foot">intercepted</div></div>
+  <div class="card kpi"><div class="lab">Supplier escalation</div><div class="num" style="color:#7ee6b0">✓</div><div class="foot">CAPA raised</div></div>
+ </div>
+ <div class="grid g-2 section-gap">
+  <div class="card"><h3>Containment progress</h3><div class="sub">Live from shipment &amp; customer systems</div>
+   <div class="prog"><div class="ph"><span class="k">Confirmed VINs recalled</span><span class="v">2 / 3</span></div><div class="pt"><div class="pf" style="width:67%"></div></div></div>
+   <div class="prog"><div class="ph"><span class="k">Dealers updated</span><span class="v">5 / 5</span></div><div class="pt"><div class="pf" style="width:100%"></div></div></div>
+   <div class="prog"><div class="ph"><span class="k">Customers notified</span><span class="v">4 / 5</span></div><div class="pt"><div class="pf" style="width:80%"></div></div></div>
+   <div class="prog"><div class="ph"><span class="k">Probable held &amp; inspected</span><span class="v">1 / 1</span></div><div class="pt"><div class="pf" style="width:100%"></div></div></div></div>
+  <div class="card"><h3>Closure by risk tier</h3><div class="sub">Open vs closed actions</div>
+   <div class="donut-wrap"><svg width="140" height="140" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#0d1730" stroke-width="7"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#12B76A" stroke-width="7" stroke-dasharray="70 30" stroke-dashoffset="25"/><circle cx="21" cy="21" r="15.9" fill="none" stroke="#F79009" stroke-width="7" stroke-dasharray="30 70" stroke-dashoffset="-45"/><text x="21" y="20" text-anchor="middle" font-size="7" font-weight="800" fill="#F4F7FF" font-family="JetBrains Mono">70%</text><text x="21" y="26" text-anchor="middle" font-size="3" fill="#98A2B3">CLOSED</text></svg>
+    <div class="legend"><div class="li"><span class="sw" style="background:var(--green)"></span><span class="nm">Closed</span><span class="vl">7</span></div><div class="li"><span class="sw" style="background:var(--orange)"></span><span class="nm">Open</span><span class="vl">3</span></div><div class="li" style="color:var(--muted-2);font-size:11.5px;margin-top:6px">Target closure · 48h</div></div></div></div>
+ </div>`,
+
+audit:()=>`
+ <div class="page-head"><div><div class="eyebrow">Defensibility</div><h1>Audit Trail</h1><p>Timestamped record of every input, AI output and human approval.</p></div><button class="btn btn-ghost">Export audit report</button></div>
+ <div class="card"><div class="flow">
+  <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Defect detected</div><div class="m">Supplier alert · CB-7821</div></div><span class="stamp">09:02</span></div>
+  <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Impact scan started</div><div class="m">7 systems joined via API</div></div><span class="stamp">09:04</span></div>
+  <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Affected VINs identified</div><div class="m">5 at-risk + 1 cleared · 86%</div></div><span class="stamp">09:07</span></div>
+  <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Root cause confidence 74% → 82%</div><div class="m">New inspection evidence</div></div><span class="stamp">10:40</span></div>
+  <div class="step done"><div class="sd">✓</div><div class="sc"><div class="t">Recommendation generated</div><div class="m">Scenario C · targeted</div></div><span class="stamp">10:42</span></div>
+  <div class="step now"><div class="sd">6</div><div class="sc"><div class="t">Quality Manager reviewing</div><div class="m">A. Mehta · pending approval</div></div><span class="stamp">now</span></div>
+  <div class="step wait"><div class="sd">7</div><div class="sc"><div class="t">Communications sent</div><div class="m">Dealer / customer / supplier</div></div><span class="stamp">—</span></div>
+  <div class="step wait"><div class="sd">8</div><div class="sc"><div class="t">Recall monitoring started</div><div class="m">Tracked to closure</div></div><span class="stamp">—</span></div>
+ </div></div>`,
+};
+
+const TITLES={exec:['Executive Overview','Defect investigation portfolio'],cases:['All Cases','14 investigations across the network'],case:['Case Overview · DF-EV-7821','Single-case investigation workspace']};
+
+/* ============ CASE HUB (V3 — one case, one workflow) ============ */
+const CASE_STAGES=[
+ {id:'overview', label:'Overview',        desc:'Case summary & status'},
+ {id:'impact',   label:'Impact Analysis', desc:'Trace across 7 systems'},
+ {id:'twin',     label:'Digital Twin',    desc:'3D pack simulation'},
+ {id:'risk',     label:'Risk & Decision', desc:'Radius · matrix · sim'},
+ {id:'evidence', label:'Evidence & Copilot', desc:'Docs & AI assistant'},
+ {id:'comms',    label:'Communications',  desc:'Stakeholder workflow'},
+ {id:'monitor',  label:'Live Monitoring', desc:'Containment tracking'},
+ {id:'audit',    label:'Audit & Closure', desc:'Defensible record'},
+];
+const STAGE_STATUS={overview:'done',impact:'done',twin:'done',risk:'now',evidence:'now',comms:'wait',monitor:'wait',audit:'wait'};
+let curStage='overview';
+
+function caseHub(){
+ const steps=CASE_STAGES.map((s,i)=>{
+  const st=STAGE_STATUS[s.id]||'wait';
+  return `<button class="cstep ${st} ${s.id===curStage?'active':''}" data-stage="${s.id}" onclick="goStage('${s.id}')">
+    <span class="cs-dot">${st==='done'?'✓':i+1}</span>
+    <span class="cs-tx"><span class="cs-l">${s.label}</span><span class="cs-d">${s.desc}</span></span></button>`;
+ }).join('<span class="cstep-sep"></span>');
+ return `<div class="case-hub">
+   <div class="case-hero">
+     <div class="ch-l">
+       <div class="eyebrow">Single Case Workspace</div>
+       <h1>Case Overview · <span class="mono">DF-EV-7821</span></h1>
+       <p>One defect, one connected investigation — step through every AI-powered stage, from detection to closure.</p>
+     </div>
+     <div class="ch-r">
+       <div class="ch-chip"><span class="k">Severity</span><span class="v" style="color:#ff9a90">Critical</span></div>
+       <div class="ch-chip"><span class="k">Stage</span><span class="v">4 / 8</span></div>
+       <div class="ch-chip"><span class="k">Confidence</span><span class="v">82%</span></div>
+     </div>
+   </div>
+   <div class="stepper" id="stepper">${steps}</div>
+   <div id="stageBody" class="stage-body"></div>
+ </div>`;
+}
+
+function goStage(sid,skipScroll){
+ curStage=sid;
+ const body=document.getElementById('stageBody');
+ if(!body) return;
+ body.innerHTML = (sid==='evidence') ? (VIEWS.evidence()+VIEWS.copilot()) : VIEWS[sid]();
+ document.querySelectorAll('.cstep').forEach(b=>b.classList.toggle('active',b.dataset.stage===sid));
+ const idx=CASE_STAGES.findIndex(s=>s.id===sid), prev=CASE_STAGES[idx-1], next=CASE_STAGES[idx+1];
+ body.insertAdjacentHTML('beforeend',`<div class="stage-nav">
+   ${prev?`<button class="btn btn-ghost" onclick="goStage('${prev.id}')">← ${prev.label}</button>`:'<span></span>'}
+   <span class="stage-count">Stage ${idx+1} of ${CASE_STAGES.length} · investigation lifecycle</span>
+   ${next?`<button class="btn btn-primary" onclick="goStage('${next.id}')">${next.label} →</button>`:`<button class="btn btn-primary" onclick="go('exec')">Back to portfolio ↗</button>`}
+ </div>`);
+ if(sid==='twin'){ let tries=0; const boot=()=>{ if(window.initPackTwin){ try{ window.initPackTwin(); }catch(e){ const fb=document.getElementById('twinFallback'); if(fb) fb.style.display='grid'; } }
+     else if(tries++<40){ setTimeout(boot,150); } else { const fb=document.getElementById('twinFallback'); if(fb) fb.style.display='grid'; } };
+   setTimeout(boot,60); }
+ if(sid==='evidence'){ renderEvidence(); initWorkspace(); }
+ if(sid==='risk'){ renderRadius(); }
+ if(!skipScroll){ const sp=document.getElementById('stepper'); if(sp) sp.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+window.goStage=goStage;
+
+/* ============ NAV ============ */
+function go(id){
+ if(id==='case'){ document.getElementById('main').innerHTML=`<section class="view active">${caseHub()}</section>`; }
+ else { document.getElementById('main').innerHTML=`<section class="view active">${VIEWS[id]()}</section>`; }
+ document.querySelectorAll('.nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===id));
+ const t=TITLES[id]||['',''];document.getElementById('tbTitle').innerHTML=`${t[0]}<small>${t[1]}</small>`;
+ window.scrollTo({top:0});
+ if(id==='case'){ goStage(curStage,true); }
+}
+window.go=go;
+document.querySelectorAll('.nav a').forEach(a=>a.onclick=()=>go(a.dataset.view));
+
+/* ============ evidence explorer ============ */
+const EVID=[
+ {src:'PDF',cls:'pdf',t:'Supplier Audit Report.pdf',m:'VoltCell Energy · 12 pages',imp:'+18%',find:'Calibration deviation detected in production line 3 during the CB-7821 run window.',thumbs:[]},
+ {src:'XLS',cls:'xls',t:'Inspection Report.xlsx',m:'Final pack inspection · 5 packs',imp:'+22%',find:'BP-1001 and BP-1002 failed thermal test at 89°C and 85°C — abnormal heat generation.',thumbs:[]},
+ {src:'CSV',cls:'csv',t:'Production Log.csv',m:'Machine logs · Line-01 / 03',imp:'+14%',find:'Temperature spike logged on Line-01 at 09:15 during PO-1001; Line-03 sensor gap flagged.',thumbs:[]},
+ {src:'IMG',cls:'pdf',t:'Battery inspection images',m:'3 images · AI-annotated',imp:'+9%',find:'Visual: micro-crack pattern on module casing consistent with thermal stress.',thumbs:['Cell crack','Inspection','Module']},
+];
+function renderEvidence(){
+ const el=document.getElementById('evList');if(!el)return;
+ el.innerHTML=EVID.map((e,i)=>`<div class="ev-card" id="ev${i}">
+  <div class="ev-head" onclick="document.getElementById('ev${i}').classList.toggle('open')">
+   <div class="l"><div class="ev-fi ${e.cls}">${e.src}</div><div class="ev-title">${e.t}<small>${e.m}</small></div></div>
+   <div class="ev-right"><span class="ev-imp">${e.imp}</span><span class="ev-chevron"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></div>
+  <div class="ev-body"><div class="ev-finding"><div class="fl">AI-identified finding · confidence impact ${e.imp}</div><div class="ft">“${e.find}”</div></div>
+   ${e.thumbs.length?`<div class="ev-thumbs">${e.thumbs.map((c,j)=>`<div class="ev-thumb" style="background:linear-gradient(135deg,${['#33455f','#2a3a52','#3a2f2f'][j%3]},#1a2942)"><span>${c}</span></div>`).join('')}</div>`:''}
+  </div></div>`).join('');
+}
+
+/* ============ radius blips ============ */
+function renderRadius(){
+ const rad=document.getElementById('radius');if(!rad)return;
+ const blips=[[44,34,'#D92D20','VIN-001 · ABC Motors · TX'],[60,44,'#D92D20','VIN-002 · XYZ Auto · IL'],[40,60,'#D92D20','VIN-003 · DriveTech · FL'],[70,62,'#F79009','VIN-005 · Speed EV · TX'],[30,44,'#FEC84B','VIN-004 · EcoDrive · CA'],[78,30,'#12B76A','VIN-006 · GreenDrive · WA']];
+ blips.forEach(b=>{const d=document.createElement('div');d.className='blip';d.style.cssText=`left:${b[0]}%;top:${b[1]}%;background:${b[2]}`;d.innerHTML=`<span class="tip">${b[3]}</span>`;rad.appendChild(d);});
+}
+
+/* ============ module selection (called from 3D) ============ */
+window.selectModule=function(id){
+ const m=modules[id];const b=document.getElementById('drawerBody');const e=document.getElementById('drawerEmpty');
+ if(!m||!b)return;e.style.display='none';b.style.display='block';
+ b.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:15px;font-weight:800;font-family:'JetBrains Mono'">${id}</div><span class="rc ${m.cls}">${m.risk}</span></div>
+  <div class="dr-row"><span class="k">Pack batch</span><span class="v">${m.pack}</span></div>
+  <div class="dr-row"><span class="k">Linked vehicles</span><span class="v">${m.vins}</span></div>
+  <div class="dr-row"><span class="k">Inspection</span><span class="v">${m.insp}</span></div>
+  <div class="dr-row"><span class="k">QMS status</span><span class="v">${m.qms}</span></div>
+  <div class="dr-row" style="border:none"><span class="k">Machine log</span><span class="v">${m.mc}</span></div>
+  <div style="margin-top:16px"><span class="adobe-tag">Firefly storyboard</span></div>`;
+};
+
+/* ============ interactions ============ */
+function pickScn(el){document.querySelectorAll('.scn').forEach(s=>s.style.outline='none');el.style.outline='2px solid var(--blue)';el.style.outlineOffset='2px';}
+function approve(btn){btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m5 12 5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Approved · routing to Plant Head';btn.classList.remove('btn-primary');btn.style.background='var(--green)';btn.style.color='#04240f';const s=document.getElementById('stepQM');if(s){s.classList.remove('now');s.classList.add('done');s.querySelector('.sd').textContent='✓';document.getElementById('qmState').textContent='Approved';}}
+
+/* comms guided */
+let cStake='',cType='';
+function selStake(el,v){document.querySelectorAll('#stakeOpts .opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');cStake=v;document.getElementById('cs1').classList.remove('on');document.getElementById('cs2').classList.add('on');}
+function selType(el,v){document.querySelectorAll('#typeOpts .opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');cType=v;document.getElementById('cs2').classList.remove('on');document.getElementById('cs3').classList.add('on');}
+function genDraft(){if(!cStake||!cType){return;}const box=document.getElementById('draftBox');
+ const drafts={Supplier:`Dear VoltCell Energy Quality Team,\n\nOur investigation (Case DF-EV-7821) has linked lithium cell batch CB-7821 to confirmed thermal failures in 3 vehicles. We are initiating a targeted recall and require a formal CAPA within 48 hours, including root-cause analysis for the Line-3 calibration deviation identified in your audit report.`,'Quality Manager':`Investigation summary — DF-EV-7821\n\nBatch CB-7821 traced to 3 confirmed, 1 probable and 1 under-review vehicle. Recommended action: targeted recall (Scenario C). AI confidence 82%. Awaiting your approval to proceed.`,'Plant Head':`Action required — Plant-A / Plant-C\n\nQuarantine packs BP-1001…BP-1004 from batch CB-7821. Hold Line-03 output pending sensor validation. 2,000 cells flagged at-risk across PO-1001/1002/1004.`,'Production Team':`Line notice — Line-01 & Line-03\n\nStop-build on CB-7821 modules. Re-inspect BP-1004 (pending). Log all thermal readings above 70°C for the current shift.`};
+ box.style.display='block';box.innerHTML=`<div class="dh"><svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v3M9 21h6" stroke-linecap="round"/></svg>Adobe Express · AI draft · ${cStake} · ${cType}</div>${drafts[cStake]||drafts.Supplier}`;
+ document.getElementById('cs3').classList.remove('on');document.getElementById('cs4').classList.add('on');document.getElementById('sendRow').style.display='block';}
+function sendComm(btn){btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m5 12 5 5L20 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Sent';btn.style.background='var(--green)';btn.style.color='#04240f';
+ const tl=document.getElementById('commTimeline');const now=new Date();const hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ const div=document.createElement('div');div.className='step done';div.innerHTML=`<div class="sd">✓</div><div class="sc"><div class="t">${cType} sent to ${cStake}</div><div class="m">Adobe Express · approved by A. Mehta</div></div><span class="stamp">${hh}</span>`;tl.appendChild(div);}
+
+/* ============ copilot brain (shared) ============ */
+function aiAnswer(q){
+ q=q.toLowerCase();
+ if(q.includes('supplier')||q.includes('source')||q.includes('root cause'))
+  return{txt:`Batch <b>CB-7821</b> from <b>VoltCell Energy</b> is the likely source. It's the only common thread across all failing units, and it correlates with 67% of recent thermal failures.`,cite:['Supplier Audit 92%','Machine Logs 84%','Genealogy graph'],list:['Same batch in all 3 confirmed VINs','Failed pack inspection (89°C / 85°C)','Line-01 temperature spike logged']};
+ if(q.includes('evidence')||q.includes('support'))
+  return{txt:`Confidence is 86% overall. Strongest support comes from the supplier audit and machine logs; the two partial sources (Line-03 logs, BP-1004 inspection) are what keep VIN-004/005 out of the confirmed tier.`,cite:['Inspection.xlsx +22%','Supplier Audit +18%'],list:[]};
+ if(q.includes('similar')||q.includes('previous')||q.includes('historical')||q.includes('compare'))
+  return{txt:`This closely resembles <b>DF-EV-7610</b> (resolved March) — same supplier, same thermal signature. That case closed in 2.1 days with a targeted recall of confirmed VINs only.`,cite:['DF-EV-7610 archive'],list:[]};
+ if(q.includes('production continue')||q.includes('what if')||q.includes('predict')||q.includes('timeline'))
+  return{txt:`If production continues on CB-7821, projected exposure rises to ~9 vehicles within 48h. Predicted resolution with Scenario C: <b>~2 days</b>, matching the DF-EV-7610 precedent.`,cite:['What-if model','DF-EV-7610'],list:[]};
+ if(q.includes('confident')||q.includes('confidence'))
+  return{txt:`AI confidence is <b>82%</b> at the root-cause stage. It rose from 74% after the latest supplier inspection report was ingested.`,cite:['Confidence engine'],list:[]};
+ if(q.includes('summar')||q.includes('executive'))
+  return{txt:`<b>DF-EV-7821 summary:</b> VoltCell batch CB-7821 (thermal instability) reached 5 vehicles / 5 customers across 4 regions. 3 confirmed, 1 probable, 1 under review, 1 cleared. Recommended: targeted recall (Scenario C, $2.4M). Escalated; awaiting QM approval.`,cite:['Analysis output'],list:[]};
+ if(q.includes('block')||q.includes('closure'))
+  return{txt:`Two items block closure: the pending inspection on <b>BP-1004</b> and the <b>Line-03 sensor gap</b> affecting VIN-005 certainty. Resolving both would move VIN-005 out of the probable tier.`,cite:['Data gaps'],list:[]};
+ if(q.includes('email')||q.includes('draft')||q.includes('supplier email'))
+  return{txt:`I can draft a supplier escalation to VoltCell in the Communication Center — pre-filled with the CAPA request and the Line-3 calibration finding. Head to Communication → Supplier → Escalation.`,cite:[],list:[]};
+ return{txt:`I have full context on DF-EV-7821 — root cause, evidence, exposure and history. Try asking about the root cause, supporting evidence, similar past cases, or for an executive summary.`,cite:[],list:[]};
+}
+function msgHTML(role,text,cite,list){
+ if(role==='user')return `<div class="msg user">${text}</div>`;
+ const c=(cite&&cite.length)?`<div class="cite">${cite.map(x=>`<span>${x}</span>`).join('')}</div>`:'';
+ const l=(list&&list.length)?`<ul>${list.map(x=>`<li>${x}</li>`).join('')}</ul>`:'';
+ return `<div class="msg ai"><div class="aitag"><svg viewBox="0 0 24 24" width="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a5 5 0 0 1 5 5v1a5 5 0 0 1-1 3l1 4-4-1a5 5 0 0 1-6-4.9V8a5 5 0 0 1 5-5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>Copilot</div>${text}${l}${c}</div>`;
+}
+const WS_CHIPS=['Why is VoltCell the source?','What evidence supports this?','Show similar historical cases','What if production continues?','How confident is the AI?'];
+function initWorkspace(){
+ const chips=document.getElementById('wsChips');const log=document.getElementById('wsLog');if(!log)return;
+ chips.innerHTML=WS_CHIPS.map(c=>`<span class="pchip" onclick="wsAsk('${c.replace(/'/g,"\\'")}')">${c}</span>`).join('');
+ if(!log.dataset.init){log.innerHTML=msgHTML('ai','Hi — I have full context on <b>DF-EV-7821</b> at the Root Cause stage. Ask me anything, or tap a prompt below.');log.dataset.init='1';}
+}
+function wsAsk(q){const log=document.getElementById('wsLog');log.innerHTML+=msgHTML('user',q);const a=aiAnswer(q);setTimeout(()=>{log.innerHTML+=msgHTML('ai',a.txt,a.cite,a.list);log.scrollTop=log.scrollHeight;},260);log.scrollTop=log.scrollHeight;}
+function wsSend(){const i=document.getElementById('wsInput');if(!i.value.trim())return;wsAsk(i.value.trim());i.value='';}
+
+/* ============ floating copilot ============ */
+let coInit=false;
+function toggleCopilot(){const p=document.getElementById('copanel');p.classList.toggle('open');if(!coInit){coBoot();coInit=true;}}
+function coBoot(){const b=document.getElementById('coBody');
+ b.innerHTML=`<div class="prompt-chips">${['Summarize this case','What\'s blocking closure?','Show root cause evidence','Predict resolution timeline','Draft supplier email'].map(c=>`<span class="pchip" onclick="coAsk(this.textContent)">${c}</span>`).join('')}</div><div id="coLog"></div>`;
+ document.getElementById('coLog').innerHTML=msgHTML('ai','I\'m aware of the selected case, its stage, evidence and stakeholders — no need to repeat context. What do you need?');
+}
+function coAsk(q){const log=document.getElementById('coLog');log.innerHTML+=msgHTML('user',q);const a=aiAnswer(q);setTimeout(()=>{log.innerHTML+=msgHTML('ai',a.txt,a.cite,a.list);const bd=document.getElementById('coBody');bd.scrollTop=bd.scrollHeight;},260);}
+function coSend(){const i=document.getElementById('coInput');if(!i.value.trim())return;coAsk(i.value.trim());i.value='';}
+
+/* ============ boot ============ */
+go('exec');
+
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+let scene,camera,renderer,controls,raycaster,mouse,canvas,tip,packReady=false;
+const meshes={};
+// 6 modules on tray (2 rows x 3 cols) mapped to real risk
+const RISK={confirmed:0xD92D20,probable:0xF79009,review:0xFEC84B,cleared:0x12B76A,none:0x64748B};
+const MODULES=[
+ {id:'MB-8901',pos:[-2.1,-0.8],risk:'confirmed'},
+ {id:'MB-8902',pos:[0,-0.8],risk:'confirmed'},
+ {id:'MB-8904',pos:[2.1,-0.8],risk:'probable'},
+ {id:'MB-8903',pos:[-2.1,0.8],risk:'review'},
+ {id:'MB-8905',pos:[0,0.8],risk:'cleared'},
+ {id:'—',pos:[2.1,0.8],risk:'none'},
+];
+
+function init(){
+ if(packReady)return;
+ canvas=document.getElementById('packTwin');tip=document.getElementById('twinTip');
+ if(!canvas)return;
+ try{
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x070c18);
+  scene.fog=new THREE.Fog(0x070c18,15,30);
+  const w=canvas.clientWidth||800,h=canvas.clientHeight||440;
+  camera=new THREE.PerspectiveCamera(42,w/h,0.1,100);
+  camera.position.set(6.5,6.5,8.5);
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(w,h);
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.target.set(0,0.3,0);controls.enableDamping=true;controls.dampingFactor=.08;
+  controls.minDistance=5;controls.maxDistance=18;controls.maxPolarAngle=Math.PI*0.49;controls.update();
+
+  scene.add(new THREE.AmbientLight(0xffffff,0.6));
+  const key=new THREE.DirectionalLight(0xffffff,0.9);key.position.set(6,10,5);scene.add(key);
+  const rim=new THREE.DirectionalLight(0x4D9DFF,0.35);rim.position.set(-6,4,-6);scene.add(rim);
+
+  const tray=new THREE.Mesh(new THREE.BoxGeometry(6.9,0.25,3.4),new THREE.MeshStandardMaterial({color:0x141f38,roughness:0.7,metalness:0.2}));
+  tray.position.y=-0.05;scene.add(tray);
+  const grid=new THREE.GridHelper(16,16,0x1E2A44,0x121b30);grid.position.y=-0.18;scene.add(grid);
+
+  MODULES.forEach(m=>{
+   const group=new THREE.Group();group.position.set(m.pos[0],0,m.pos[1]);
+   const col=RISK[m.risk];const flagged=(m.risk==='confirmed'||m.risk==='probable');
+   const cellGeo=new THREE.CylinderGeometry(0.15,0.15,0.55,16);
+   for(let r=0;r<3;r++)for(let c=0;c<4;c++){
+    const mat=new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:flagged?0.35:0.06,roughness:0.4,metalness:0.35});
+    const cell=new THREE.Mesh(cellGeo,mat);cell.position.set((c-1.5)*0.4,0.3,(r-1)*0.4);cell.userData.flagged=flagged;group.add(cell);
+   }
+   const casing=new THREE.Mesh(new THREE.BoxGeometry(1.85,0.66,1.45),new THREE.MeshStandardMaterial({color:0x121b30,roughness:0.9,transparent:true,opacity:0.22}));
+   casing.position.y=0.3;casing.userData.id=m.id;casing.userData.risk=m.risk;group.add(casing);
+   scene.add(group);
+   if(m.id!=='—')meshes[m.id]={casing,risk:m.risk};
+  });
+
+  raycaster=new THREE.Raycaster();mouse=new THREE.Vector2();
+  canvas.addEventListener('pointermove',onMove);
+  canvas.addEventListener('pointerleave',()=>{if(tip)tip.style.opacity=0;});
+  canvas.addEventListener('click',onClick);
+  window.addEventListener('resize',onResize);
+  packReady=true;animate();
+ }catch(e){
+  const fb=document.getElementById('twinFallback');if(fb)fb.style.display='grid';
+ }
+}
+const LABELS={confirmed:'Confirmed — batch CB-7821',probable:'Probable — pending inspection',review:'Under review — inspection passed',cleared:'Cleared — batch CB-7822',none:'Spare — not affected'};
+const COLHEX={confirmed:'#ff8a7e',probable:'#ffb95e',review:'#ffe3a3',cleared:'#7ee6b0',none:'#b6c0d4'};
+function pick(evt){
+ const rect=canvas.getBoundingClientRect();
+ mouse.x=((evt.clientX-rect.left)/rect.width)*2-1;mouse.y=-((evt.clientY-rect.top)/rect.height)*2+1;
+ raycaster.setFromCamera(mouse,camera);
+ return {rect,hits:raycaster.intersectObjects(Object.values(meshes).map(m=>m.casing))};
+}
+function onMove(evt){
+ const {rect,hits}=pick(evt);
+ if(hits.length){const d=hits[0].object.userData;tip.style.left=(evt.clientX-rect.left)+'px';tip.style.top=(evt.clientY-rect.top)+'px';
+  tip.querySelector('.n').textContent=d.id;tip.querySelector('.n').style.color=COLHEX[d.risk];tip.querySelector('.s').textContent=LABELS[d.risk];tip.style.opacity=1;canvas.style.cursor='pointer';}
+ else{tip.style.opacity=0;canvas.style.cursor='grab';}
+}
+function onClick(evt){const {hits}=pick(evt);if(hits.length){const id=hits[0].object.userData.id;if(id!=='—'&&window.selectModule)window.selectModule(id);}}
+function onResize(){if(!packReady)return;const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
+function animate(){requestAnimationFrame(animate);const t=performance.now()*0.002;
+ scene.traverse(o=>{if(o.isMesh&&o.userData.flagged&&o.geometry.type==='CylinderGeometry')o.material.emissiveIntensity=0.28+Math.sin(t*3)*0.16;});
+ controls.update();renderer.render(scene,camera);}
+
+window.initPackTwin=init;
+
+</script>
+</body>
+</html>
